@@ -67,8 +67,10 @@ bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 NMCMC = 22000
 Nburn = 2000
 Nthin = 10
+Ntune = 10000
 
-sexp = [0.2, 0.2, 0.05]
+# sexp = [0.2, 0.2, 0.05]
+sexp = [1, 1, 0.2]
 smexp = 0.05
 
 ## INITIALISATION OF MCMC
@@ -82,28 +84,50 @@ llold = llchain[0]
 lpold = logprior(MCchain[0,:Ndim], punif)
 lsold = logsp(MCchain[0,Ndim], dist=smod)
 nacc = 0
+tvacc = []
+
 
 ## RUN OF MCMC
-for i in range(1,NMCMC):
-    xprop = rnv(MCchain[i-1,:Ndim],sexp)
-    sp = rnlv(MCchain[i-1,Ndim],smexp)
-    llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
-    lpprop = logprior(xprop, punif)
-    lspp = logsp(sp, dist=smod)
-    ldiff = llprop + lpprop + lspp - llold - lpold - lsold
-    if ldiff > np.log(np.random.rand()):
-        MCchain[i,:Ndim] = xprop
-        MCchain[i,Ndim] = sp
-        llchain[i] = llprop
-        llold = llprop
-        lpold = lpprop
-        lsold = lspp
-        if i>Nburn: nacc += 1
-    else:
-        MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
-        MCchain[i,Ndim] = MCchain[i-1,Ndim]
-        llchain[i] = llchain[i-1]
-    if i%1000 == 0 : print(i)
+Nphase = [Ntune, NMCMC]
+for Ncur in Nphase:
+    if Ncur == NMCMC: ## re-initialization for active MCMC after tuning
+        nacc = 0
+        MCchain[Ntune-1,:Ndim] = xprop
+        MCchain[Ntune-1,Ndim] = sp
+        llold = llchain[0]
+        lpold = logprior(MCchain[0,:Ndim], punif)
+        lsold = logsp(MCchain[0,Ndim], dist=smod)
+    if Ncur == Ntune: tacc=0 
+    for i in range(1,Ncur): ## one chain for tuning another after tuning
+        xprop = rnv(MCchain[i-1,:Ndim],sexp)
+        sp = rnlv(MCchain[i-1,Ndim],smexp)
+        llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+        lpprop = logprior(xprop, punif)
+        lspp = logsp(sp, dist=smod)
+        ldiff = llprop + lpprop + lspp - llold - lpold - lsold
+        if ldiff > np.log(np.random.rand()):
+            tacc +=1
+            if i>Nburn: nacc += 1
+            MCchain[i,:Ndim] = xprop
+            MCchain[i,Ndim] = sp
+            llchain[i] = llprop
+            llold = llprop
+            lpold = lpprop
+            lsold = lspp
+        else:
+            MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
+            MCchain[i,Ndim] = MCchain[i-1,Ndim]
+            llchain[i] = llchain[i-1]
+        if (i%1000 == 0) & (Ncur == Ntune): print(i, tacc/100)
+        if (i%1000 == 0) & (Ncur != Ntune): print(i)
+        if (i%100 == 0) & (Ncur == Ntune): ## fully proportional tuning of step size
+            tvacc.append(tacc/100)
+            if (tacc/100)<0.3:
+                sexp = [0.9*sexp[i] for i in range(Ndim)]
+            else:
+                sexp = [1.1*sexp[i] for i in range(Ndim)]
+            tacc = 0
+            
 
 print("acceptation rate :", "{:.2f}".format(nacc/(NMCMC-Nburn)))
 
