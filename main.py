@@ -8,6 +8,7 @@ import matplotlib.patches as patches
 from mpl_toolkits import mplot3d
 import scipy.stats as sst
 
+import time as time
 # matplotlib.use('QtAgg')
 
 
@@ -16,19 +17,19 @@ import scipy.stats as sst
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 2*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
 
 b0 = [2, -1, 2, 0]
-nslvl = 0.5
+nslvl = 0.2
 
 xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
 xplot[:,1] = 1
 
 xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
-                 np.c_[sst.norm().rvs(10)]])
+                 np.c_[sst.norm(loc=0, scale=1).rvs(10)]])
 ymes = modeltrue(xmes, b0)
 ymes += sst.norm().rvs(xmes.shape[0])*nslvl
 
@@ -41,14 +42,12 @@ def loglike(obs, var, par, smod, model):
     return np.sum(
         sst.norm(loc=model(var, par), scale=smod).logpdf(obs))
 
-def logprior(par, pl=-5, ph=5):
-    return np.sum([
-        sst.uniform(pl,ph-pl).logpdf(x) for x in par])
-def logsp(s): return np.max([smod.logpdf(s),-100])
+def logprior(par, dists):
+    return np.sum([dists[i].logpdf(par) for i in range(len(par))])
+def logsp(s,dist): return np.max([dist.logpdf(s),-100])
 
-
-def rnv(m,s): return sst.norm(loc=m, scale=s).rvs()
-def rnlv(m,s): return np.exp(sst.norm(loc=np.log(m), scale=s).rvs())
+def rnv(m,s): return np.random.randn(len(m))*np.array(s)+np.array(m)
+def rnlv(m,s): return np.exp(np.random.randn()*s+np.log(m))
 
 
 #%%############################################################################
@@ -59,11 +58,8 @@ def rnlv(m,s): return np.exp(sst.norm(loc=np.log(m), scale=s).rvs())
 Ndim = 3
 pl = -5
 ph = 5
-
+punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 smod = sst.invgauss(0.4,0.2)
-
-sexp = [0.2, 0.2, 0.05]
-smexp = 0.05
 
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 
@@ -71,6 +67,9 @@ bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 NMCMC = 22000
 Nburn = 2000
 Nthin = 10
+
+sexp = [0.2, 0.2, 0.05]
+smexp = 0.05
 
 ## INITIALISATION OF MCMC
 MCchain = np.zeros((NMCMC, Ndim+1))
@@ -80,8 +79,8 @@ MCchain[0,Ndim] = smod.mean()
 llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
                       model=modelfit)
 llold = llchain[0]
-lpold = logprior(MCchain[0,:Ndim], pl, ph)
-lsold = logsp(MCchain[0,Ndim])
+lpold = logprior(MCchain[0,:Ndim], punif)
+lsold = logsp(MCchain[0,Ndim], dist=smod)
 nacc = 0
 
 ## RUN OF MCMC
@@ -89,8 +88,8 @@ for i in range(1,NMCMC):
     xprop = rnv(MCchain[i-1,:Ndim],sexp)
     sp = rnlv(MCchain[i-1,Ndim],smexp)
     llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
-    lpprop = logprior(xprop, pl, ph)
-    lspp = logsp(sp)
+    lpprop = logprior(xprop, punif)
+    lspp = logsp(sp, dist=smod)
     ldiff = llprop + lpprop + lspp - llold - lpold - lsold
     if ldiff > np.log(np.random.rand()):
         MCchain[i,:Ndim] = xprop
@@ -104,17 +103,9 @@ for i in range(1,NMCMC):
         MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
         MCchain[i,Ndim] = MCchain[i-1,Ndim]
         llchain[i] = llchain[i-1]
-    if i%500 == 0 : print(i)
-    # print("LLN", "{:.1f}".format(llprop),
-    #       "LLO", "{:.1f}".format(llold),
-    #     "LPN", "{:.1f}".format(lpprop),
-    #     "LPO", "{:.1f}".format(lpold),
-    #     "LSN", "{:.1f}".format(lspp),        
-    #     "LSO", "{:.1f}".format(lsold), 
-    #     "dif", "{:.2f}".format(ldiff), sep='|')
+    if i%1000 == 0 : print(i)
 
 print("acceptation rate :", "{:.2f}".format(nacc/(NMCMC-Nburn)))
-
 
 #%%############################################################################
 # POSTPROCESSING OF RAW OUTPUT OF MCMC
@@ -136,7 +127,8 @@ postxplotm = np.array([modelfit(xplot, MCchainS[i,:Ndim])
 postxplot = np.array([sst.norm(loc=modelfit(xplot, MCchainS[i,:Ndim]),
                             scale=MCchainS[i,Ndim]).rvs(xplot.shape[0])
       for i in range(Ntot-Nppost,Ntot)])
-
+postMAP = sst.norm(loc=modelfit(xplot, MAP[:Ndim]),
+                    scale=MAP[Ndim]).rvs(xplot.shape[0])
 
 #%%############################################################################
 # VISUALISATION OF RESULT IN OBSERVATION SPACE
@@ -149,6 +141,8 @@ ax.plot(xmes[:,l], postY[-1:,:].T, '.k', label='posterior calibrated')
 ax.plot(xmes[:,l], postY[-Nppost:,:].T, '.k')
 ax.plot(xmes[:,l], ymes, '.r', label='available observation')
 ax.plot(xplot[:,l], modeltrue(xplot, b0), '-b', label='true function')
+ax.plot(xplot[:,l], modelfit(xplot, MAP), '--k', label='MAP mean')
+# ax.plot(xplot[:,l], postMAP, '+k', label='MAP draw')
 ax.fill_between(xplot[:,l],
                 y1=postxplot.mean(axis=0) + 2*postxplot.std(axis=0),
                 y2=postxplot.mean(axis=0) - 2*postxplot.std(axis=0),
@@ -163,26 +157,21 @@ ax.set_ylabel('y')
 ax.set_xlabel('x')
 ax.legend()
 
-
-
 #%%############################################################################
 # VISUALISATION OF RESULT IN PARAMETER SPACE
 ###############################################################################
 
-# lplot = -Ntot + 100
-lplot = 0
 startchain = False
 
-fig, ax = plt.subplots(4,4)
+fig, ax = plt.subplots(4,4, figsize=(8,8))
 for i in range(4):
     for j in range(4):
         if j>i:
             if startchain:
                 ax[i,j].plot(MCchain[:Nburn,j], MCchain[:Nburn,i],'-k',
                     linewidth=0.5)
-                # ax[i,j].plot(bstart[j], bstart[i], 'sb')
-            ax[i,j].scatter(MCchainS[lplot:,j], MCchainS[lplot:,i],
-                             c=llchainS[lplot:],
+            ax[i,j].scatter(MCchainS[:,j], MCchainS[:,i],
+                             c=llchainS[:],
                             marker='.', cmap='jet')
             ax[i,j].plot(b0[j], b0[i], 's', color='k', ms=10, alpha=0.4)
             ax[i,j].plot(MAP[j], MAP[i], 'dk')
@@ -197,39 +186,39 @@ for i in range(4):
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-l = 3
-Nc = int(Ntot/4)
+diag = False
 
-burnzone = patches.Rectangle((0, pl), Nburn, ph-pl,
-                               alpha=0.2, color='r', linestyle='')
-okzone = patches.Rectangle((Nburn, pl), NMCMC-Nburn, ph-pl,
-                               alpha=0.2, color='g', linestyle='')
+if diag:
+    l = 3
+    Nc = int(Ntot/4)
 
-kdes = [sst.gaussian_kde(MCf[i*Nc:(i+1)*Nc,l]) for i in range(0,4)]
+    burnzone = patches.Rectangle((0, pl), Nburn, ph-pl,
+                                alpha=0.2, color='r', linestyle='')
+    okzone = patches.Rectangle((Nburn, pl), NMCMC-Nburn, ph-pl,
+                                alpha=0.2, color='g', linestyle='')
 
-fig, ax = plt.subplots(figsize=(10,4))
-ax.plot(MCchain[:,l],'-k')
-# ax.plot(bstart[l], 'sk')
-ax.plot(np.arange(Nburn, NMCMC, Nthin), MCf[:,l], '.b')
-ax.add_patch(burnzone)
-ax.add_patch(okzone)
-ax.axhline(y=MAP[l], color='m', linestyle='--', label='MAP')
-ax.axhline(y=b0[l], color='r', linestyle='-', label='true')
-ax.set_xlabel('Step in chain')
-ax.set_ylabel('parameter value')
-ax.legend()
+    kdes = [sst.gaussian_kde(MCf[i*Nc:(i+1)*Nc,l]) for i in range(0,4)]
 
-fig, ax = plt.subplots()
-ax.hist(MCf[:,l], edgecolor='b', color='b', bins=20, alpha=0.2)
-axx = ax.twinx()
-for i in range(4):
-    axx.plot(np.linspace(pl,ph,200), kdes[i](np.linspace(pl,ph,200)), '-k')
-ax.axvline(x=MAP[l], color='m', linestyle='--', label='MAP')
-ax.axvline(x=b0[l], color='r', linestyle='-', label='true')
-ax.set_xlim(pl, ph)
-ax.legend()
+    fig, ax = plt.subplots(figsize=(10,4))
+    ax.plot(MCchain[:,l],'-k')
+    ax.plot(np.arange(Nburn, NMCMC, Nthin), MCf[:,l], '.b')
+    ax.add_patch(burnzone)
+    ax.add_patch(okzone)
+    ax.axhline(y=MAP[l], color='m', linestyle='--', label='MAP')
+    ax.axhline(y=b0[l], color='r', linestyle='-', label='true')
+    ax.set_xlabel('Step in chain')
+    ax.set_ylabel('parameter value')
+    ax.legend()
 
-# plt.show()
+    fig, ax = plt.subplots()
+    ax.hist(MCf[:,l], edgecolor='b', color='b', bins=20, alpha=0.2)
+    axx = ax.twinx()
+    for i in range(4):
+        axx.plot(np.linspace(pl,ph,200), kdes[i](np.linspace(pl,ph,200)), '-k')
+    ax.axvline(x=MAP[l], color='m', linestyle='--', label='MAP')
+    ax.axvline(x=b0[l], color='r', linestyle='-', label='true')
+    ax.set_xlim(pl, ph)
+    ax.legend()
 
 #%%############################################################################
 # VISUALISATION WITH TWO DIMENSION CASE
@@ -250,15 +239,17 @@ postgrid = np.array([sst.norm(loc=modelfit(
 post2Dm = postgrid.mean(axis=0).reshape([xg.shape[0], yg.shape[0]])
 post2Ds = postgrid.std(axis=0).reshape([xg.shape[0], yg.shape[0]])
     
-
-fig = plt.figure(figsize=(10,10))
+fig = plt.figure(figsize=(12,12))
 ax = plt.axes(projection='3d')
 ax.plot_surface(xg, yg, zg, cmap='jet_r', alpha=0.5)
 for k in range(xmes.shape[0]):
     ax.scatter(xmes[k,0], xmes[k,1], postY[-50:,k], c='k', marker='.')
-ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.2)
-ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.2)
+ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.4)
+ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.4)
 ax.scatter(xmes[:,0], xmes[:,1], ymes, c=ymes, cmap='jet_r')
-
+ax.view_init(0,-90)
+# ax.view_init(0,180)
+ax.set_proj_type('ortho')
+# ax.set_proj_type('persp')
 
 # %%
