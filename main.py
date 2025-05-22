@@ -15,15 +15,16 @@ import scipy.stats as sst
 ###############################################################################
 
 def model(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1]
 
-b0 = [2, -1, 2, 0.5]
-nslvl = 2
+b0 = [2, -1, 2, 0]
+nslvl = 0.2
 
 xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
+xplot[:,1] = 1
 
-xmes = np.array([[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5],
-                 [1]*10]).T
+xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
+                 np.c_[sst.norm().rvs(10)]])
 ymes = model(xmes, b0)
 ymes += sst.norm().rvs(xmes.shape[0])*nslvl
 
@@ -53,20 +54,7 @@ Ndim = 3
 pl = -3
 ph = 3
 
-# smod = 0.5
-smod = sst.invgauss(0.001,1)
-# def sprop():
-#     if type(smod) == float:
-#         sp = smod
-#     elif type(smod) == type(sst.invgauss(0)):
-#         sp = smod.rvs()
-#     return sp
-# def lsprop(s): 
-#     if type(smod) == float:
-#         ls = 0
-#     elif type(smod) == type(sst.invgauss(0)):
-#         ls = smod.logpdf(s)
-#     return ls
+smod = sst.invgauss(0.2,1)
 
 sexp = [0.5, 0.5, 0.5]
 smexp = 0.01
@@ -83,7 +71,6 @@ MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
 MCchain[0,:Ndim] = bstart
 MCchain[0,Ndim] = smod.mean()
-# MCchain[0,Ndim] = 0.2
 llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
                       model=model)
 llold = llchain[0]
@@ -96,11 +83,9 @@ for i in range(1,NMCMC):
     xprop = rnv(MCchain[i-1,:Ndim],sexp)
     so = MCchain[i-1,Ndim]
     sp = rnlv(so,smexp)
-    # sp = 0.2
     llprop = loglike(ymes, xmes, xprop, sp, model=model)
     lpprop = logprior(xprop, pl, ph)
     lspp = smod.logpdf(sp)
-    # lspp = 0
     ldiff = llprop + lpprop + lspp - llold - lpold - lsold
     if ldiff > np.log(np.random.rand()):
         MCchain[i,:Ndim] = xprop
@@ -126,15 +111,7 @@ MCchainS = MCf[idsort,:]
 llchainS = llf[idsort]
 Ntot = MCchainS.shape[0]
 MAP = MCchainS[-1,:]
-Nppost = 30
-# postY = np.array([sst.norm(loc=model(xmes, MCf[i,:Ndim]),
-#                             scale=MCf[i,Ndim]).rvs(xmes.shape[0])
-#                               for i in range(Ntot-Nppost, Ntot)])
-# postxplotm = np.array([model(xplot, MCf[i,:Ndim])
-#       for i in range(Ntot-Nppost,Ntot)])
-# postxplot = np.array([sst.norm(loc=model(xplot, MCf[i,:Ndim]),
-#                             scale=MCf[i,Ndim]).rvs(xplot.shape[0])
-#       for i in range(Ntot-Nppost,Ntot)])
+Nppost = 100
 postY = np.array([sst.norm(loc=model(xmes, MCchainS[i,:Ndim]),
                             scale=MCchainS[i,Ndim]).rvs(xmes.shape[0])
                               for i in range(Ntot-Nppost, Ntot)])
@@ -143,6 +120,31 @@ postxplotm = np.array([model(xplot, MCchainS[i,:Ndim])
 postxplot = np.array([sst.norm(loc=model(xplot, MCchainS[i,:Ndim]),
                             scale=MCchainS[i,Ndim]).rvs(xplot.shape[0])
       for i in range(Ntot-Nppost,Ntot)])
+
+
+#%%############################################################################
+# VISUALISATION OF RESULT IN OBSERVATION SPACE
+###############################################################################
+
+fig, ax = plt.subplots()
+# ax.plot(xplot[:,0], model(xplot, b0), '-b', label='true function')
+ax.plot(xmes[:,0], postY[-1:,:].T, '.k', label='posterior calibrated')
+ax.plot(xmes[:,0], postY[-100:,:].T, '.k')
+ax.plot(xmes[:,0], ymes, '.r', label='available observation')
+ax.fill_between(xplot[:,0],
+                y1=postxplot.mean(axis=0) + 2*postxplot.std(axis=0),
+                y2=postxplot.mean(axis=0) - 2*postxplot.std(axis=0),
+                color='m', alpha=0.3,
+                label="posterior")
+ax.fill_between(xplot[:,0],
+                y1=postxplotm.mean(axis=0) + 2*postxplotm.std(axis=0),
+                y2=postxplotm.mean(axis=0) - 2*postxplotm.std(axis=0),
+                  color='g', alpha=0.6,
+                label="posterior model no noise")
+ax.set_ylabel('y')
+ax.set_xlabel('x')
+ax.legend()
+
 
 
 #%%############################################################################
@@ -164,36 +166,13 @@ for i in range(4):
             ax[i,j].scatter(MCchainS[lplot:,j], MCchainS[lplot:,i],
                              c=llchainS[lplot:],
                             marker='.', cmap='jet')
-            ax[i,j].plot(b0[j], b0[i], 's', color='m')
-            ax[i,j].plot(MAP[j], MAP[i], '.b')
+            ax[i,j].plot(b0[j], b0[i], 's', color='k', ms=10, alpha=0.4)
+            ax[i,j].plot(MAP[j], MAP[i], 'dk')
         elif j == i:
             ax[i,j].hist(MCchainS[:,j], edgecolor='k')
             ax[i,j].set_xlabel('b' + str(i))
         else:
             ax[i,j].set_visible(False)
-
-
-
-#%%############################################################################
-# VISUALISATION OF RESULT IN OBSERVATION SPACE
-###############################################################################
-
-fig, ax = plt.subplots()
-ax.plot(xplot[:,0], model(xplot, b0), '-b', label='true function')
-ax.plot(xmes[:,0], postY[-100:,:].T, '.k')
-ax.plot(xmes[:,0], ymes, '.r', label='available observation')
-ax.fill_between(xplot[:,0],
-                y1=postxplot.mean(axis=0) + 2*postxplot.std(axis=0),
-                y2=postxplot.mean(axis=0) - 2*postxplot.std(axis=0),
-                color='m', alpha=0.3,
-                label="posterior")
-ax.fill_between(xplot[:,0],
-                y1=postxplotm.max(axis=0),
-                y2=postxplotm.min(axis=0), color='g', alpha=0.6,
-                label="posterior model no noise")
-ax.set_ylabel('y')
-ax.set_xlabel('x')
-ax.legend()
 
 
 #%%############################################################################
