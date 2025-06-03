@@ -17,7 +17,7 @@ import time as time
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 0.2*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
@@ -64,10 +64,10 @@ smod = sst.invgauss(0.4,0.2)
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 
 ## PARAMETRIZATION OF MCMC
-NMCMC = 22000
+NMCMC = 52000
 Nburn = 2000
 Nthin = 10
-Ntune = 10000
+Ntune = 50000
 
 # sexp = [0.2, 0.2, 0.05]
 sexp = [1, 1, 0.2]
@@ -118,13 +118,15 @@ for Ncur in Nphase:
             MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
             MCchain[i,Ndim] = MCchain[i-1,Ndim]
             llchain[i] = llchain[i-1]
-        if (i%1000 == 0) & (Ncur == Ntune): print(i, tacc/100)
+        if (i%1000 == 0) & (Ncur == Ntune): print(i, tacc/100, sexp)
         if (i%1000 == 0) & (Ncur != Ntune): print(i)
         if (i%100 == 0) & (Ncur == Ntune): ## fully proportional tuning of step size
             tvacc.append(tacc/100)
             if (tacc/100)<0.3:
+                # sexp[np.random.randint(3)] *= 0.9
                 sexp = [0.9*sexp[i] for i in range(Ndim)]
             else:
+                # sexp[np.random.randint(3)] *= 1.1
                 sexp = [1.1*sexp[i] for i in range(Ndim)]
             tacc = 0
             
@@ -210,10 +212,10 @@ for i in range(4):
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-diag = False
+diag = True
 
 if diag:
-    l = 3
+    l = 0
     Nc = int(Ntot/4)
 
     burnzone = patches.Rectangle((0, pl), Nburn, ph-pl,
