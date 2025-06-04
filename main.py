@@ -17,7 +17,7 @@ import time as time
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 0.2*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
@@ -64,10 +64,10 @@ smod = sst.invgauss(0.4,0.2)
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 
 ## PARAMETRIZATION OF MCMC
-NMCMC = 52000
+NMCMC = 22000
 Nburn = 2000
 Nthin = 10
-Ntune = 50000
+Ntune = 20000
 
 # sexp = [0.2, 0.2, 0.05]
 sexp = [1, 1, 0.2]
@@ -166,7 +166,7 @@ fig, ax = plt.subplots()
 ax.plot(xmes[:,l], postY[-1:,:].T, '.k', label='posterior calibrated')
 ax.plot(xmes[:,l], postY[-Nppost:,:].T, '.k')
 ax.plot(xmes[:,l], ymes, '.r', label='available observation')
-ax.plot(xplot[:,l], modeltrue(xplot, b0), '-b', label='true function')
+ax.plot(xplot[:,l], modeltrue(xplot, b0), '-b', label='true function (y-slice)')
 ax.plot(xplot[:,l], modelfit(xplot, MAP), '--k', label='MAP mean')
 # ax.plot(xplot[:,l], postMAP, '+k', label='MAP draw')
 ax.fill_between(xplot[:,l],
