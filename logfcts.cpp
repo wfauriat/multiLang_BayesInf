@@ -17,9 +17,9 @@ std::vector<std::vector<double>> params_to_cov(
 
 Eigen::MatrixXd vectorToMatrix(const std::vector<std::vector<double>>& vect)
 {
-    Eigen::MatrixXd datav(vect.size(), 2);
+    Eigen::MatrixXd datav(vect.size(), vect[0].size());
     for (int i = 0; i < vect.size(); ++i) {
-        for (int j = 0; j < 2; ++j) {
+        for (int j = 0; j < vect[0].size(); ++j) {
             datav(i, j) = vect[i][j];
         }
     }

@@ -13,6 +13,26 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
+                const std::vector<double>& b)
+{
+    std::vector<double> result;
+    for (const auto& t : x) {
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 4*t[1]);
+    }
+    return result;
+}
+
+std::vector<double> modelfit(const std::vector<std::vector<double>>& x,
+                const std::vector<double>& b)
+{
+    std::vector<double> result;
+    for (const auto& t : x) {
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]);
+    }
+    return result;
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -21,6 +41,59 @@ int main(int argc, char* argv[]) {
     std::mt19937 gen(123);
     std::normal_distribution<> d0(0.0, 1.0);
     std::uniform_real_distribution<> du(0.0, 1.0);
+
+
+    //////////////////// DEFINITION OF APPLICATION / CALIBRATION CASE
+    std::vector<double> b0 {2.0, -1.0, 2.0, 0.0};
+    double nslvl {0.2};
+    double smod {0.2};
+
+    std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5, 2.8, 4.0, 4.4, 5.2, 5.5};
+    std::vector<double> ymes;
+    std::vector<double> ytheo;
+    std::vector<std::vector<double>> xxmes(xmes.size(), {0.0, 0.0});
+   
+    for (int i=0; i < xmes.size(); ++i) {
+        xxmes[i][0] = xmes[i];
+    }
+    ymes = modeltrue(xxmes, b0);
+    ytheo = modeltrue(xxmes, b0);
+    for (int i=0; i < xmes.size(); ++i) {
+        ymes[i] += d0(gen) * nslvl;
+    }
+
+    std::vector<double> btest {1.8, -1.2, 2.1, 0.0};
+    std::vector<double> pred = modeltrue(xxmes, btest);
+
+    Eigen::VectorXd mean0(xmes.size());
+    Eigen::VectorXd mean1(xmes.size());
+    Eigen::VectorXd obs(xmes.size());
+    Eigen::MatrixXd cov(xmes.size(), xmes.size());
+    
+    for (int i=0; i < xmes.size(); ++i) {
+        mean0(i) = ytheo[i];
+        mean1(i) = pred[i];
+        obs(i) = ymes[i];
+        cov(i,i) = smod;
+    }
+
+    double LL1 = logfct::calculateSingleMultivariateGaussianLogLikelihood(
+        obs, mean0, cov);
+    double LL2 = logfct::calculateSingleMultivariateGaussianLogLikelihood(
+        obs, mean1, cov);
+
+    std::cout << "XMES :" << std::endl;
+    for (const auto& t : xxmes) {std::cout << t[0] << " ";} 
+    std::cout << std::endl;
+    std::cout << "YMES :" << std::endl;
+    for (const auto& t : ymes) {std::cout << t << " ";} 
+    std::cout << std::endl;
+    std::cout << "PRED :" << std::endl;
+    for (const auto& t : mean1) {std::cout << t << " ";} 
+    std::cout << std::endl;
+    std::cout << "LL1 : " << LL1 << " LL2 : " << LL2 << std::endl;
+
+    // double tmp = cov(0,0);
 
     //////////////////// DEFINITION OF TRUE PARAMETERS
     double mu_1 = 3, mu_2 = 1, s_1 = 0.5, s_2 = 0.1, rho = 0.9;
@@ -163,15 +236,6 @@ int main(int argc, char* argv[]) {
     //////////////////// POST TRAITMENT OF MCMC CHAIN
     std::cout << "MCMC finished." << std::endl;
 
-    // std::cout << "Visualisation of chain end :" << std::endl;
-    // int chainN = posterior_samples.size();
-    // for (int j=0; j < 5; ++j) {
-    //     for (int i=chainN - 10; i < chainN; ++i) {
-    //         std::cout << posterior_samples[i][j] << " ";
-    //     };
-    //     std::cout << std::endl;
-    // };
-
     double MAP_mu1 = 0, MAP_mu2 = 0, MAP_s1 = 0, MAP_s2 = 0, MAP_rho = 0;
     for (const auto& point : posterior_samples){
         MAP_mu1 += point[0];
@@ -196,18 +260,18 @@ int main(int argc, char* argv[]) {
 
 
     ///////////////////// DATA OUTPUT
-    std::string filenamedata = "data.txt";
-    std::string filenameMAP = "MAP.txt";
-    std::ofstream outputFiledata(filenamedata, std::ios::out | std::ios::trunc);
-    std::ofstream outputFileMAP(filenameMAP, std::ios::out | std::ios::trunc);
+    // std::string filenamedata = "data.txt";
+    // std::string filenameMAP = "MAP.txt";
+    // std::ofstream outputFiledata(filenamedata, std::ios::out | std::ios::trunc);
+    // std::ofstream outputFileMAP(filenameMAP, std::ios::out | std::ios::trunc);
 
-    for (int i=0; i < data.size(); ++i) {
-        outputFiledata << data[i][0] << "," << data[i][1] << std::endl;
-    }
-    outputFileMAP << MAP_mu1 << "," << MAP_mu2 << "," << 
-                     MAP_s1  << "," << MAP_s2  << "," << MAP_rho << std::endl;
+    // for (int i=0; i < data.size(); ++i) {
+    //     outputFiledata << data[i][0] << "," << data[i][1] << std::endl;
+    // }
+    // outputFileMAP << MAP_mu1 << "," << MAP_mu2 << "," << 
+    //                  MAP_s1  << "," << MAP_s2  << "," << MAP_rho << std::endl;
 
 
-    outputFiledata.close();
-    outputFileMAP.close();
+    // outputFiledata.close();
+    // outputFileMAP.close();
 }
