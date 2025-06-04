@@ -6,29 +6,14 @@
 #include <stdexcept>
 
 #include "helpervectmat.hpp"
-#include <Eigen/Dense>
-#include <Eigen/Cholesky>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-//////////////////////////////////////////////////////////////////////////////
-///////// FUNCTIONS DECLARATIONS
-//////////////////////////////////////////////////////////////////////////////
 
 std::vector<std::vector<double>> params_to_cov(double sigma_x, double sigma_y, 
     double rho);
-
-double calculateSingleMultivariateGaussianLogLikelihood(
-    const Eigen::VectorXd& x,
-    const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma);
-
-double calculateDatasetMultivariateGaussianLogLikelihood(
-    const Eigen::MatrixXd& data,
-    const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma);
 
 double log_likelihood(const std::vector<std::vector<double>>& data,
                     double mu_x, double mu_y,
@@ -37,12 +22,6 @@ double log_likelihood(const std::vector<std::vector<double>>& data,
 double log_prior(double mu_x, double mu_y,
                  double sigma_x, double sigma_y,
                  double rho);
-
-
-
-//////////////////////////////////////////////////////////////////////////////
-///////// MAIN 
-//////////////////////////////////////////////////////////////////////////////
 
 
 int main(int argc, char* argv[]) {
@@ -115,7 +94,7 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
     };
 
-    int num_iterations = 100000;
+    int num_iterations = 20000;
     int burn_in = 2000;
     int thin_factor = 10;
 
@@ -222,40 +201,8 @@ int main(int argc, char* argv[]) {
     std::cout << "MAP s_2 : " << MAP_s2 << std::endl;
     std::cout << "MAP rho : " << MAP_rho << std::endl;
 
-
-    // Eigen::VectorXd x1(2);
-    // x1 << 0.5, 1.0;
-
-    // Eigen::MatrixXd data2(3, 2);
-    // data2 << 0.5, 1.0,
-    //          -0.1, 0.2,
-    //          1.2, -0.8;
-
-    // Eigen::VectorXd mu1(2);
-    // mu1 << 0.0, 0.0;
-
-    // Eigen::MatrixXd sigma1(2, 2);
-    // sigma1 << 1.0, 0.5,
-    //           0.5, 1.0;
-
-    // double log_likelihood_single = 
-    //     calculateSingleMultivariateGaussianLogLikelihood(x1, mu1, sigma1);
-    
-    // std::cout << "Log-likelihood for single point: " << 
-    //     log_likelihood_single << std::endl;
-
-    // double log_likelihood_dataset = 
-    //     calculateDatasetMultivariateGaussianLogLikelihood(data2, mu1, sigma1);
-    // std::cout << "Total log-likelihood for dataset: " << 
-    //     log_likelihood_dataset << std::endl;
-
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////////
-///////// FUNCTIONS DEFINITIONS
-//////////////////////////////////////////////////////////////////////////////
 
 
 std::vector<std::vector<double>> params_to_cov(
@@ -268,67 +215,6 @@ std::vector<std::vector<double>> params_to_cov(
     cov[1][0] = rho * sigma_x * sigma_y;
     return cov;
 }
-
-
-double calculateSingleMultivariateGaussianLogLikelihood(
-    const Eigen::VectorXd& x,
-    const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma)
-{
-    int D = x.rows();
-    Eigen::VectorXd diff = x - mu;
-    
-    Eigen::LLT<Eigen::MatrixXd> lltOfSigma(sigma);
-    if (lltOfSigma.info() != Eigen::Success) {
-        std::cerr <<
-         "Error: Covariance matrix is not positive definite or singular." <<
-        std::endl;
-        return -std::numeric_limits<double>::infinity();
-    }
-    double mahalanobis_squared = diff.transpose() * lltOfSigma.solve(diff);
-    double log_det_sigma =
-     2.0 * lltOfSigma.matrixLLT().diagonal().array().log().sum();
-    double log_likelihood = -0.5 * (D * std::log(2.0 * M_PI) +
-     log_det_sigma + mahalanobis_squared);
-
-    return log_likelihood;
-}
-
-double calculateDatasetMultivariateGaussianLogLikelihood(
-    const Eigen::MatrixXd& data,
-    const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma)
-{
-    int N = data.rows();
-    int D = data.cols();
-
-    if (N == 0) {
-        return 0.0;
-    }
-
-    Eigen::LLT<Eigen::MatrixXd> lltOfSigma(sigma);
-    if (lltOfSigma.info() != Eigen::Success) {
-        std::cerr << 
-        "Error: Covariance matrix is not positive definite or singular." << 
-        std::endl;
-        return -std::numeric_limits<double>::infinity();
-    }
-    double log_det_sigma = 
-        2.0 * lltOfSigma.matrixLLT().diagonal().array().log().sum();
-    
-    double total_log_likelihood = 0.0;
-    total_log_likelihood -= (double)N / 2.0 * (D * std::log(2.0 * M_PI) 
-                                                + log_det_sigma);
-
-    for (int i = 0; i < N; ++i) {
-        Eigen::VectorXd diff = data.row(i).transpose() - mu; 
-        double mahalanobis_squared = diff.transpose() * lltOfSigma.solve(diff);
-        total_log_likelihood -= 0.5 * mahalanobis_squared;
-    }
-
-    return total_log_likelihood;
-}
-
 
 double log_likelihood(const std::vector<std::vector<double>>& data,
                     double mu_x, double mu_y,

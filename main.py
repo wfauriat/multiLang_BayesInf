@@ -81,7 +81,7 @@ MCchain[0,Ndim] = smod.mean()
 llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
                       model=modelfit)
 llold = llchain[0]
-lpold = logprior(MCchain[0,:Ndim], punif)
+lpold = logprior(MCchain[0,:Ndim], dists=punif)
 lsold = logsp(MCchain[0,Ndim], dist=smod)
 nacc = 0
 tvacc = []
