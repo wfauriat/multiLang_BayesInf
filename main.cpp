@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <fstream>
 
 #include "helpervectmat.hpp"
 #include "logfcts.hpp"
@@ -22,7 +23,7 @@ int main(int argc, char* argv[]) {
     std::uniform_real_distribution<> du(0.0, 1.0);
 
     //////////////////// DEFINITION OF TRUE PARAMETERS
-    double mu_1 = 3, mu_2 = 1, s_1 = 0.5, s_2 = 0.1, rho = 0.6;
+    double mu_1 = 3, mu_2 = 1, s_1 = 0.5, s_2 = 0.1, rho = 0.9;
 
     std::vector<double> mu_vec = {mu_1, mu_2};
     std::vector<std::vector<double>> true_cov = logfct::params_to_cov(
@@ -93,39 +94,22 @@ int main(int argc, char* argv[]) {
         double proposed_s1 = current_s1 + d0(gen) * proposal_sd_sigma;
         double proposed_s2 = current_s2 + d0(gen) * proposal_sd_sigma;
         double proposed_rho = current_rho + d0(gen) * proposal_sd_rho;
-        // const double EPSILON = std::numeric_limits<double>::epsilon() * 1000;
-        // proposed_s1 = std::max(EPSILON, proposed_s1);
-        // proposed_s2 = std::max(EPSILON, proposed_s2);
-        // proposed_rho = std::max(proposed_rho, -1+EPSILON);
-        // proposed_rho = std::min(proposed_rho, 1-EPSILON);
 
         std::vector<std::vector<double>> current_cov;
         std::vector<std::vector<double>> proposed_cov;
         double current_log_post;
         double proposed_log_post;
         double acceptance_ratio;
-
-        current_cov = logfct::params_to_cov(current_s1, current_s2,
-                                 current_rho);
-        proposed_cov = logfct::params_to_cov(proposed_s1, proposed_s2, 
-        proposed_rho);
-
-        // current_log_post = log_likelihood(data,
-        //                     current_mu_1, current_mu_2,
-        //                     current_cov) 
-        //                     + log_prior(current_mu_1, current_mu_2,
-        //                     current_s1, current_s2, current_rho);
-        // proposed_log_post = log_likelihood(data,
-        //              proposed_mu_1, proposed_mu_2, proposed_cov) 
-        //              + log_prior(proposed_mu_1, proposed_mu_2,
-        //              proposed_s1, proposed_s2, proposed_rho);
-        
         Eigen::VectorXd curr_mu(2);
         Eigen::MatrixXd curr_cov(2, 2);
         Eigen::VectorXd prop_mu(2);
         Eigen::MatrixXd prop_cov(2, 2);
         Eigen::MatrixXd datav(num_data_points, 2);
 
+        current_cov = logfct::params_to_cov(current_s1, current_s2,
+                                 current_rho);
+        proposed_cov = logfct::params_to_cov(proposed_s1, proposed_s2, 
+        proposed_rho);
         curr_mu << current_mu_1, current_mu_2;
         curr_cov << current_cov[0][0], current_cov[0][1],
                     current_cov[1][0], current_cov[1][1];
@@ -211,6 +195,19 @@ int main(int argc, char* argv[]) {
     std::cout << "MAP rho : " << MAP_rho << std::endl;
 
 
+    ///////////////////// DATA OUTPUT
+    std::string filenamedata = "data.txt";
+    std::string filenameMAP = "MAP.txt";
+    std::ofstream outputFiledata(filenamedata, std::ios::out | std::ios::trunc);
+    std::ofstream outputFileMAP(filenameMAP, std::ios::out | std::ios::trunc);
+
+    for (int i=0; i < data.size(); ++i) {
+        outputFiledata << data[i][0] << "," << data[i][1] << std::endl;
+    }
+    outputFileMAP << MAP_mu1 << "," << MAP_mu2 << "," << 
+                     MAP_s1  << "," << MAP_s2  << "," << MAP_rho << std::endl;
+
+
+    outputFiledata.close();
+    outputFileMAP.close();
 }
-
-
