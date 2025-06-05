@@ -10,13 +10,13 @@ namespace logfct {
 std::vector<std::vector<double>> params_to_cov(double sigma_x, double sigma_y, 
     double rho);
 
-double calculateSingleMultivariateGaussianLogLikelihood(
+double logLikelihood(
     const Eigen::VectorXd& x,
     const Eigen::VectorXd& mu,
     const Eigen::MatrixXd& sigma,
     bool verbose=false);
 
-double calculateDatasetMultivariateGaussianLogLikelihood(
+double logLikelihoodVect(
     const Eigen::MatrixXd& data,
     const Eigen::VectorXd& mu,
     const Eigen::MatrixXd& sigma,
@@ -24,14 +24,8 @@ double calculateDatasetMultivariateGaussianLogLikelihood(
 
 Eigen::MatrixXd vectorToMatrix(const std::vector<std::vector<double>>& vect);
 
-
-double log_likelihood(const std::vector<std::vector<double>>& data,
-                    double mu_x, double mu_y,
-                    const std::vector<std::vector<double>>& cov);
-
-double log_prior(double mu_x, double mu_y,
-                 double sigma_x, double sigma_y,
-                 double rho);
+double log_prior(const std::vector<std::vector<double>>& bounds,
+                 const std::vector<double>& point);
 
 }
 

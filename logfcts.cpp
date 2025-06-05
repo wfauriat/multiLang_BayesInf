@@ -1,6 +1,6 @@
 #include "logfcts.hpp"
 #include "helpervectmat.hpp"
-
+// #include <tuple>
 
 namespace logfct {
 
@@ -26,7 +26,7 @@ Eigen::MatrixXd vectorToMatrix(const std::vector<std::vector<double>>& vect)
     return datav;
 }
 
-double calculateSingleMultivariateGaussianLogLikelihood(
+double logLikelihood(
     const Eigen::VectorXd& x,
     const Eigen::VectorXd& mu,
     const Eigen::MatrixXd& sigma,
@@ -53,7 +53,7 @@ double calculateSingleMultivariateGaussianLogLikelihood(
     return log_likelihood;
 }
 
-double calculateDatasetMultivariateGaussianLogLikelihood(
+double logLikelihoodVect(
     const Eigen::MatrixXd& data,
     const Eigen::VectorXd& mu,
     const Eigen::MatrixXd& sigma,
@@ -91,45 +91,20 @@ double calculateDatasetMultivariateGaussianLogLikelihood(
     return total_log_likelihood;
 }
 
-
-double log_likelihood(const std::vector<std::vector<double>>& data,
-                    double mu_x, double mu_y,
-                    const std::vector<std::vector<double>>& cov) 
+double log_prior(const std::vector<std::vector<double>>& bounds,
+                 const std::vector<double>& point)
 {
-    int N = data.size();
-    double determinant = vhelp::det2x2(cov);
-
-    if (determinant <= 0) { // Covariance must be positive definite
-        return -std::numeric_limits<double>::infinity();
+    bool inside = true;
+    auto bound_it = bounds.begin();
+    auto point_it = point.begin();
+    for (;bound_it != bounds.end() && point_it != point.end();
+     ++bound_it, ++point_it){
+        if (*point_it <= (*bound_it)[0] || *point_it >= (*bound_it)[1])
+        {
+            inside=false;
+        } 
     }
-
-    double log_det_cov = std::log(determinant);
-    std::vector<std::vector<double>> inv_cov = vhelp::inv2x2(cov);
-
-    double sum_mahalanobis_dist_sq = 0.0;
-    std::vector<double> mu = {mu_x, mu_y};
-
-    for (const auto& point : data) {
-        std::vector<double> diff = {point[0] - mu[0], point[1] - mu[1]};
-        std::vector<double> temp = vhelp::vec_mat_mult(diff, inv_cov);
-        sum_mahalanobis_dist_sq += vhelp::vec_vec_mult(temp, diff);
-    }
-
-    double log_lik = -0.5 * (N * (2 * std::log(2 * M_PI) 
-                    + log_det_cov) 
-                    + sum_mahalanobis_dist_sq);
-    return log_lik;
-}
-
-
-double log_prior(double mu_x, double mu_y,
-                 double sigma_x, double sigma_y,
-                 double rho) 
-{
-    if (sigma_x <= 0 || sigma_y <= 0 || rho <= -1 || rho >= 1) {
-        return -std::numeric_limits<double>::infinity();
-    }
-    return 0.0;
+    return inside ? 0 : -std::numeric_limits<double>::infinity();
 }
 
 

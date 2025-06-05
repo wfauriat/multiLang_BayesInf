@@ -17,7 +17,7 @@ import time as time
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 1*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
@@ -78,11 +78,13 @@ MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
 MCchain[0,:Ndim] = bstart
 MCchain[0,Ndim] = smod.mean()
+# MCchain[0,Ndim] = 0.2
 llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
                       model=modelfit)
 llold = llchain[0]
 lpold = logprior(MCchain[0,:Ndim], dists=punif)
 lsold = logsp(MCchain[0,Ndim], dist=smod)
+# lsold = 0
 nacc = 0
 tvacc = []
 
@@ -97,13 +99,16 @@ for Ncur in Nphase:
         llold = llchain[0]
         lpold = logprior(MCchain[0,:Ndim], punif)
         lsold = logsp(MCchain[0,Ndim], dist=smod)
+        # lsold = 0
     if Ncur == Ntune: tacc=0 
     for i in range(1,Ncur): ## one chain for tuning another after tuning
         xprop = rnv(MCchain[i-1,:Ndim],sexp)
         sp = rnlv(MCchain[i-1,Ndim],smexp)
+        # sp = 0.2
         llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
         lpprop = logprior(xprop, punif)
         lspp = logsp(sp, dist=smod)
+        # lspp = 0
         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
         if ldiff > np.log(np.random.rand()):
             tacc +=1

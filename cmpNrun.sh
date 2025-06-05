@@ -3,6 +3,6 @@
 g++ helpervectmat.cpp logfcts.cpp main.cpp -g -o app -O2 \
     -I ./src/lib/eigen
 
-./app 50
+./app
 
-# python visu.py
+python visu.py

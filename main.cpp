@@ -18,7 +18,7 @@ std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
 {
     std::vector<double> result;
     for (const auto& t : x) {
-        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 4*t[1]);
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 0.01*t[1]);
     }
     return result;
 }
@@ -33,6 +33,25 @@ std::vector<double> modelfit(const std::vector<std::vector<double>>& x,
     return result;
 }
 
+Eigen::VectorXd s2e(const std::vector<double>& x) 
+{
+    Eigen::VectorXd eigV(x.size());
+        for (int i=0; i<x.size();++i) {eigV(i)=x[i];}
+        return eigV;
+}
+
+std::vector<double> rnv(const std::vector<double>& x,
+                const std::vector<double>& prop_s){
+    std::vector<double> prop(prop_s.size());
+    std::normal_distribution<> d0(0.0, 1.0);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    for (int k=0; k<prop_s.size(); ++k) {
+        prop[k] = x[k] + d0(gen) * prop_s[k];
+    }
+    return prop;
+};
+
 
 int main(int argc, char* argv[]) {
 
@@ -42,45 +61,49 @@ int main(int argc, char* argv[]) {
     std::normal_distribution<> d0(0.0, 1.0);
     std::uniform_real_distribution<> du(0.0, 1.0);
 
+    // const auto covDiagMat = [](const double& stdV, int size){
+    //     Eigen::MatrixXd cov(size, size);
+    //     for (int i=0; i<size; ++i) {
+    //         cov(i,i) = stdV;
+    //     }
+    //     return cov;
+    // };
+
+    // auto rnv = [](const std::vector<double>& x,
+    //                 const std::vector<double>& prop_s){
+    //     std::vector<double> prop(prop_s.size());
+    //     std::normal_distribution<> d0(0.0, 1.0);
+    //     std::random_device rd;
+    //     std::mt19937 gen(rd());
+    //     for (int k=0; k<=prop_s.size(); ++k) {
+    //         prop[k] = x[k] + d0(gen) * prop_s[k];
+    //     }
+    //     return prop;
+    // };
+
     //////////////////// DEFINITION OF APPLICATION / CALIBRATION CASE
-    std::vector<double> b0 {2.0, -1.0, 2.0, 0.0};
+    std::vector<double> b0 {2.0, -1.0, 2.0};
+    std::vector<double> btest {1.5, -0.7, 1.5};
     double nslvl {0.2};
     double smod {0.2};
 
     std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5,
                               2.8, 4.0, 4.4, 5.2, 5.5};
-    std::vector<double> ymes;
-    std::vector<double> ytheo;
     std::vector<std::vector<double>> xxmes(xmes.size(), {0.0, 0.0});
-   
-    for (int i=0; i < xmes.size(); ++i) {
+       for (int i=0; i<xmes.size(); ++i) {
         xxmes[i][0] = xmes[i];
     }
-    ymes = modeltrue(xxmes, b0);
-    ytheo = modeltrue(xxmes, b0);
-    for (int i=0; i < xmes.size(); ++i) {
+    std::vector<double> ymes = modeltrue(xxmes, b0);
+        for (int i=0; i<xmes.size(); ++i) {
         ymes[i] += d0(gen) * nslvl;
     }
+    std::vector<double> ytheo = modelfit(xxmes, b0);
 
-    std::vector<double> btest {1.8, -1.2, 2.1, 0.0};
-    std::vector<double> pred = modeltrue(xxmes, btest);
-
-    Eigen::VectorXd mean0(xmes.size());
-    Eigen::VectorXd mean1(xmes.size());
-    Eigen::VectorXd obs(xmes.size());
-    Eigen::MatrixXd cov(xmes.size(), xmes.size());
-    
-    for (int i=0; i < xmes.size(); ++i) {
-        mean0(i) = ytheo[i];
-        mean1(i) = pred[i];
-        obs(i) = ymes[i];
-        cov(i,i) = smod;
+    // auto covMat = covDiagMat(smod, xmes.size());
+    Eigen::MatrixXd covMat(xmes.size(), xmes.size());
+    for (int i=0; i<xmes.size(); ++i) {
+        covMat(i,i) = nslvl;
     }
-
-    double LL1 = logfct::calculateSingleMultivariateGaussianLogLikelihood(
-        obs, mean0, cov);
-    double LL2 = logfct::calculateSingleMultivariateGaussianLogLikelihood(
-        obs, mean1, cov);
 
     std::cout << "XMES :" << std::endl;
     for (const auto& t : xxmes) {std::cout << t[0] << " ";} 
@@ -88,190 +111,116 @@ int main(int argc, char* argv[]) {
     std::cout << "YMES :" << std::endl;
     for (const auto& t : ymes) {std::cout << t << " ";} 
     std::cout << std::endl;
-    std::cout << "PRED :" << std::endl;
-    for (const auto& t : mean1) {std::cout << t << " ";} 
-    std::cout << std::endl;
-    std::cout << "LL1 : " << LL1 << " LL2 : " << LL2 << std::endl;
-
-    // double tmp = cov(0,0);
-
-    //////////////////// DEFINITION OF TRUE PARAMETERS
-    double mu_1 = 3, mu_2 = 1, s_1 = 0.5, s_2 = 0.1, rho = 0.9;
-
-    std::vector<double> mu_vec = {mu_1, mu_2};
-    std::vector<std::vector<double>> true_cov = logfct::params_to_cov(
-        s_1, s_2, rho);
-
-    double l11 = std::sqrt(true_cov[0][0]);
-    double l21 = true_cov[1][0] / l11;
-    double l22 = std::sqrt(true_cov[1][1] - l21 * l21);
-
-    //////////////////// PARSING INPUT ARGS
-    int num_data_points;
-    if (argc > 1) {
-        try {
-            num_data_points = std::stoi(argv[1]);
-            if (num_data_points <= 0) {
-                std::cerr << 
-                "Error: Number of data points must be positive. Using default: " << 
-                100 << std::endl;
-                num_data_points = 100;
-            }
-        } catch (const std::invalid_argument& e) {
-            std::cerr << "Error: Invalid argument for number of data points. Using default: " << 
-            100 << std::endl;
-            num_data_points = 100;
-        } catch (const std::out_of_range& e) {
-            std::cerr << "Error: Number of data points out of range. Using default: " << 
-            100 << std::endl;
-            num_data_points = 100;
-        }
-    } else { 
-        num_data_points = 100;
-    }
-
-    //////////////////// GENERATE SAMPLE DATA
-    std::vector<std::vector<double>> data(num_data_points,
-                                             std::vector<double>(2));
-    std::cout << "Generation of synthetic data :" << std::endl;
-    for (int i=0; i < num_data_points; ++i){
-        double z1 = d0(gen);
-        double z2 = d0(gen);
-        // x = mu + L * z
-        data[i][0] = mu_vec[0] + l11 * z1;
-        data[i][1] = mu_vec[1] + l21 * z1 + l22 * z2;
-    };
 
     //////////////////// DEFENITION OF MCMC INFERENCE PARAMETERS
-    int num_iterations = 100000;
+    int num_iterations = 22000;
     int burn_in = 2000;
-    int thin_factor = 10;
+    int thin_factor = 20;
 
-    double proposal_sd_mu = 0.05;
-    double proposal_sd_sigma = 0.05;
-    double proposal_sd_rho = 0.02;
+    std::vector<std::vector<double>> bounds(3,{-5.0,5.0});
+    std::vector<double> proposal_sd {0.2, 0.2, 0.05};
 
-    //////////////////// DEFINITION OF START POINT
-    double current_mu_1 = 0.0, current_mu_2 = 0.0;
-    double current_s1 = 1.0, current_s2 = 1.0;
-    double current_rho = 0.0;
+    std::vector<std::vector<double>> MCchain(num_iterations,
+                                     std::vector<double>(bounds[0].size(), 0.0));
 
-    std::vector<std::vector<double>> posterior_samples;
+    std::vector<double> llchain(num_iterations, 0.0);
+    
+    MCchain[0] = btest;
+    llchain[0] = logfct::logLikelihood(s2e(ymes),
+                    s2e(modelfit(xxmes, MCchain[0])), covMat);
+    double llold = llchain[0];
+    double lpold = logfct::log_prior(bounds, MCchain[0]); 
+
+    std::vector<double> xprop = rnv(MCchain[0], proposal_sd);    
+
+    // std::cout << "llprop : " << llold << " " <<
+    //                 "ldiff : " << lpold << " " << "sample : ";
+    // for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
+    // std::cout << std::endl;
     std::cout << "Starting MCMC..." << std::endl;
+    for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
+    std::cout << std::endl;
 
-    for (int i = 0; i < num_iterations; ++i) 
+    for (int i=1; i<num_iterations; ++i)
     {
         //////////////////// GENERATION OF PROPOSAL
-        double proposed_mu_1 = current_mu_1 + d0(gen) * proposal_sd_mu;
-        double proposed_mu_2 = current_mu_2 + d0(gen) * proposal_sd_mu;
-        double proposed_s1 = current_s1 + d0(gen) * proposal_sd_sigma;
-        double proposed_s2 = current_s2 + d0(gen) * proposal_sd_sigma;
-        double proposed_rho = current_rho + d0(gen) * proposal_sd_rho;
+        xprop = rnv(MCchain[i-1], proposal_sd);
+        double llprop = logfct::logLikelihood(s2e(ymes),
+                            s2e(modelfit(xxmes, xprop)), covMat);
+        double lpprop = logfct::log_prior(bounds, xprop); 
+        double ldiff;
+        ldiff = llprop + lpprop - llold - lpold;
 
-        std::vector<std::vector<double>> current_cov;
-        std::vector<std::vector<double>> proposed_cov;
-        double current_log_post;
-        double proposed_log_post;
-        double acceptance_ratio;
-        Eigen::VectorXd curr_mu(2);
-        Eigen::MatrixXd curr_cov(2, 2);
-        Eigen::VectorXd prop_mu(2);
-        Eigen::MatrixXd prop_cov(2, 2);
-        Eigen::MatrixXd datav(num_data_points, 2);
-
-        current_cov = logfct::params_to_cov(current_s1, current_s2,
-                                 current_rho);
-        proposed_cov = logfct::params_to_cov(proposed_s1, proposed_s2, 
-        proposed_rho);
-        curr_mu << current_mu_1, current_mu_2;
-        curr_cov << current_cov[0][0], current_cov[0][1],
-                    current_cov[1][0], current_cov[1][1];
-        prop_mu << proposed_mu_1, proposed_mu_2;
-        prop_cov << proposed_cov[0][0], proposed_cov[0][1],
-            proposed_cov[1][0], proposed_cov[1][1];
-        datav = logfct::vectorToMatrix(data);
-        
-
-        //////////////////// COMPUTATION OF LIKELIHOODS
-        current_log_post = 
-            logfct::calculateDatasetMultivariateGaussianLogLikelihood(
-                datav, curr_mu, curr_cov);
-        current_log_post += logfct::log_prior(current_mu_1, current_mu_2,
-                    current_s1, current_s2, current_rho);
-        proposed_log_post = 
-            logfct::calculateDatasetMultivariateGaussianLogLikelihood(
-                datav, prop_mu, prop_cov);
-        proposed_log_post += logfct::log_prior(proposed_mu_1, proposed_mu_2,
-                            proposed_s1, proposed_s2, proposed_rho);
-
-        acceptance_ratio = std::exp(proposed_log_post - current_log_post);
-
-        if (du(gen) < acceptance_ratio) {
-            current_mu_1 = proposed_mu_1;
-            current_mu_2 = proposed_mu_2;
-            current_s1 = proposed_s1;
-            current_s2 = proposed_s2;
-            current_rho = proposed_rho;
+        if (ldiff > std::log(du(gen))) {
+            MCchain[i] = xprop;
+            llchain[i] = llprop;
+            llold = llprop;
+            lpold = lpprop;
+        }
+        else {
+            MCchain[i] = MCchain[i-1];
+            llchain[i] = llchain[i-1];
         }
 
-        if (i >= burn_in && (i - burn_in) % thin_factor == 0) {
-            posterior_samples.push_back(
-                {current_mu_1, current_mu_2,
-                current_s1, current_s2,
-                current_rho});
-        }
-        //////////////////// VISUALISATION OF INFERENCE ADVANCE
         if ((i + 1) % (num_iterations / 10) == 0) {
             std::cout << "Iteration " << i + 1 <<
-                        "/" << num_iterations <<
-                        " (Current: mu=[" <<
-                        current_mu_1 << ", " << current_mu_2 <<
-                        "], sigma_x=" << current_s1 << 
-                        ", sigma_y=" << current_s2 << 
-                        ", rho=" << current_rho << ")" <<
-                        std::endl;
+                        "/" << num_iterations << 
+                        " (Current: b0=" << MCchain[i][0] << ", " <<
+                        " b1=" << MCchain[i][1] << ", " <<
+                        " b2=" << MCchain[i][2] << ")" << std::endl;
+        }
+
+        // if (i%thin_factor == 0) {
+        //     std::cout << "llprop : " << llprop << " " <<
+        //                  "llold : " << llold << " " <<
+        //                 "ldiff : " << ldiff << " " << "sample : ";
+        //     for (int k=0;k<xprop.size();++k) {std::cout << MCchain[i][k] << " ";}
+        //     std::cout << std::endl;
+        // }
+    }
+
+    /////////////////// DATA OUTPUT
+    std::string filenamedata = "data.txt";
+    std::string filenameLL = "LL.txt";
+    std::ofstream outputFiledata(filenamedata, std::ios::out | std::ios::trunc);
+    std::ofstream outputFileLL(filenameLL, std::ios::out | std::ios::trunc);
+
+    for (int i=0; i < num_iterations; ++i) {
+        if (i%thin_factor == 0 && i > burn_in) {
+        outputFiledata << MCchain[i][0] << "," <<
+                          MCchain[i][1] << "," << 
+                          MCchain[i][2] << std::endl;
+        outputFileLL << llchain[i] << std::endl;
         }
     }
-
-    //////////////////// POST TRAITMENT OF MCMC CHAIN
-    std::cout << "MCMC finished." << std::endl;
-
-    double MAP_mu1 = 0, MAP_mu2 = 0, MAP_s1 = 0, MAP_s2 = 0, MAP_rho = 0;
-    for (const auto& point : posterior_samples){
-        MAP_mu1 += point[0];
-        MAP_mu2 += point[1];
-        MAP_s1 += point[2];
-        MAP_s2 += point[3];
-        MAP_rho += point[4];
-    }
-    MAP_mu1 /= posterior_samples.size();
-    MAP_mu2 /= posterior_samples.size();
-    MAP_s1 /= posterior_samples.size();
-    MAP_s2 /= posterior_samples.size();
-    MAP_rho /= posterior_samples.size();
-
-    //////////////////// DISPLAY OF RESULTS
-    std::cout << "Data size : " << num_data_points << std::endl;
-     std::cout << "MAP mu_1 : " << MAP_mu1 << std::endl;
-    std::cout << "MAP mu_2 : " << MAP_mu2 << std::endl;
-    std::cout << "MAP s_1 : " << MAP_s1 << std::endl;
-    std::cout << "MAP s_2 : " << MAP_s2 << std::endl;
-    std::cout << "MAP rho : " << MAP_rho << std::endl;
-
-
-    ///////////////////// DATA OUTPUT
-    // std::string filenamedata = "data.txt";
-    // std::string filenameMAP = "MAP.txt";
-    // std::ofstream outputFiledata(filenamedata, std::ios::out | std::ios::trunc);
-    // std::ofstream outputFileMAP(filenameMAP, std::ios::out | std::ios::trunc);
-
-    // for (int i=0; i < data.size(); ++i) {
-    //     outputFiledata << data[i][0] << "," << data[i][1] << std::endl;
-    // }
-    // outputFileMAP << MAP_mu1 << "," << MAP_mu2 << "," << 
-    //                  MAP_s1  << "," << MAP_s2  << "," << MAP_rho << std::endl;
-
-
-    // outputFiledata.close();
-    // outputFileMAP.close();
+    outputFiledata.close();
+    outputFileLL.close();
 }
+
+
+
+
+
+    //////////////////// PARSING INPUT ARGS
+    // int num_data_points;
+    // if (argc > 1) {
+    //     try {
+    //         num_data_points = std::stoi(argv[1]);
+    //         if (num_data_points <= 0) {
+    //             std::cerr << 
+    //             "Error: Number of data points must be positive. Using default: " << 
+    //             100 << std::endl;
+    //             num_data_points = 100;
+    //         }
+    //     } catch (const std::invalid_argument& e) {
+    //         std::cerr << "Error: Invalid argument for number of data points. Using default: " << 
+    //         100 << std::endl;
+    //         num_data_points = 100;
+    //     } catch (const std::out_of_range& e) {
+    //         std::cerr << "Error: Number of data points out of range. Using default: " << 
+    //         100 << std::endl;
+    //         num_data_points = 100;
+    //     }
+    // } else { 
+    //     num_data_points = 100;
+    // }
