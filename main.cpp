@@ -42,13 +42,13 @@ int main(int argc, char* argv[]) {
     std::normal_distribution<> d0(0.0, 1.0);
     std::uniform_real_distribution<> du(0.0, 1.0);
 
-
     //////////////////// DEFINITION OF APPLICATION / CALIBRATION CASE
     std::vector<double> b0 {2.0, -1.0, 2.0, 0.0};
     double nslvl {0.2};
     double smod {0.2};
 
-    std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5, 2.8, 4.0, 4.4, 5.2, 5.5};
+    std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5,
+                              2.8, 4.0, 4.4, 5.2, 5.5};
     std::vector<double> ymes;
     std::vector<double> ytheo;
     std::vector<std::vector<double>> xxmes(xmes.size(), {0.0, 0.0});

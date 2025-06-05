@@ -29,16 +29,19 @@ Eigen::MatrixXd vectorToMatrix(const std::vector<std::vector<double>>& vect)
 double calculateSingleMultivariateGaussianLogLikelihood(
     const Eigen::VectorXd& x,
     const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma)
+    const Eigen::MatrixXd& sigma,
+    bool verbose)
 {
     int D = x.rows();
     Eigen::VectorXd diff = x - mu;
     
     Eigen::LLT<Eigen::MatrixXd> lltOfSigma(sigma);
     if (lltOfSigma.info() != Eigen::Success) {
-        std::cerr <<
-         "Error: Covariance matrix is not positive definite or singular." <<
-        std::endl;
+        if (verbose != false) {
+            std::cerr <<
+            "Error: Covariance matrix is not positive definite or singular." <<
+            std::endl;
+        }
         return -std::numeric_limits<double>::infinity();
     }
     double mahalanobis_squared = diff.transpose() * lltOfSigma.solve(diff);
@@ -53,7 +56,8 @@ double calculateSingleMultivariateGaussianLogLikelihood(
 double calculateDatasetMultivariateGaussianLogLikelihood(
     const Eigen::MatrixXd& data,
     const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma)
+    const Eigen::MatrixXd& sigma,
+    bool verbose)
 {
     int N = data.rows();
     int D = data.cols();
@@ -64,9 +68,11 @@ double calculateDatasetMultivariateGaussianLogLikelihood(
 
     Eigen::LLT<Eigen::MatrixXd> lltOfSigma(sigma);
     if (lltOfSigma.info() != Eigen::Success) {
-        std::cerr << 
-        "Error: Covariance matrix is not positive definite or singular." << 
-        std::endl;
+        if (verbose != false) {
+            std::cerr <<
+            "Error: Covariance matrix is not positive definite or singular." <<
+            std::endl;
+        }
         return -std::numeric_limits<double>::infinity();
     }
     double log_det_sigma = 

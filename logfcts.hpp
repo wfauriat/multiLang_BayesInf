@@ -13,12 +13,14 @@ std::vector<std::vector<double>> params_to_cov(double sigma_x, double sigma_y,
 double calculateSingleMultivariateGaussianLogLikelihood(
     const Eigen::VectorXd& x,
     const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma);
+    const Eigen::MatrixXd& sigma,
+    bool verbose=false);
 
 double calculateDatasetMultivariateGaussianLogLikelihood(
     const Eigen::MatrixXd& data,
     const Eigen::VectorXd& mu,
-    const Eigen::MatrixXd& sigma);
+    const Eigen::MatrixXd& sigma,
+    bool verbose=false);
 
 Eigen::MatrixXd vectorToMatrix(const std::vector<std::vector<double>>& vect);
 
