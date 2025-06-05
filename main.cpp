@@ -5,6 +5,7 @@
 #include <string>
 #include <stdexcept>
 #include <fstream>
+#include <limits>
 
 #include "helpervectmat.hpp"
 #include "logfcts.hpp"
@@ -14,43 +15,28 @@
 #endif
 
 std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
-                const std::vector<double>& b)
-{
-    std::vector<double> result;
-    for (const auto& t : x) {
-        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 0.01*t[1]);
-    }
-    return result;
-}
+                const std::vector<double>& b);
 
 std::vector<double> modelfit(const std::vector<std::vector<double>>& x,
-                const std::vector<double>& b)
-{
-    std::vector<double> result;
-    for (const auto& t : x) {
-        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]);
-    }
-    return result;
-}
+                const std::vector<double>& b);
 
-Eigen::VectorXd s2e(const std::vector<double>& x) 
-{
-    Eigen::VectorXd eigV(x.size());
-        for (int i=0; i<x.size();++i) {eigV(i)=x[i];}
-        return eigV;
-}
+Eigen::VectorXd s2e(const std::vector<double>& x);
 
 std::vector<double> rnv(const std::vector<double>& x,
-                const std::vector<double>& prop_s){
-    std::vector<double> prop(prop_s.size());
-    std::normal_distribution<> d0(0.0, 1.0);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    for (int k=0; k<prop_s.size(); ++k) {
-        prop[k] = x[k] + d0(gen) * prop_s[k];
-    }
-    return prop;
-};
+                const std::vector<double>& prop_s);
+
+double rnlv(double m, double s);
+
+double invGaussLogLike(double x, double mu,
+     double loc = 0.0, double scale = 1.0);
+
+// const auto covDiagMat = [](const double& stdV, int size){
+//     Eigen::MatrixXd cov(size, size);
+//     for (int i=0; i<size; ++i) {
+//         cov(i,i) = stdV;
+//     }
+//     return cov;
+// };
 
 
 int main(int argc, char* argv[]) {
@@ -60,26 +46,6 @@ int main(int argc, char* argv[]) {
     std::mt19937 gen(123);
     std::normal_distribution<> d0(0.0, 1.0);
     std::uniform_real_distribution<> du(0.0, 1.0);
-
-    // const auto covDiagMat = [](const double& stdV, int size){
-    //     Eigen::MatrixXd cov(size, size);
-    //     for (int i=0; i<size; ++i) {
-    //         cov(i,i) = stdV;
-    //     }
-    //     return cov;
-    // };
-
-    // auto rnv = [](const std::vector<double>& x,
-    //                 const std::vector<double>& prop_s){
-    //     std::vector<double> prop(prop_s.size());
-    //     std::normal_distribution<> d0(0.0, 1.0);
-    //     std::random_device rd;
-    //     std::mt19937 gen(rd());
-    //     for (int k=0; k<=prop_s.size(); ++k) {
-    //         prop[k] = x[k] + d0(gen) * prop_s[k];
-    //     }
-    //     return prop;
-    // };
 
     //////////////////// DEFINITION OF APPLICATION / CALIBRATION CASE
     std::vector<double> b0 {2.0, -1.0, 2.0};
@@ -121,7 +87,8 @@ int main(int argc, char* argv[]) {
     std::vector<double> proposal_sd {0.2, 0.2, 0.05};
 
     std::vector<std::vector<double>> MCchain(num_iterations,
-                                     std::vector<double>(bounds[0].size(), 0.0));
+                                     std::vector<double>(
+                                        bounds[0].size(), 0.0));
 
     std::vector<double> llchain(num_iterations, 0.0);
     
@@ -133,10 +100,6 @@ int main(int argc, char* argv[]) {
 
     std::vector<double> xprop = rnv(MCchain[0], proposal_sd);    
 
-    // std::cout << "llprop : " << llold << " " <<
-    //                 "ldiff : " << lpold << " " << "sample : ";
-    // for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
-    // std::cout << std::endl;
     std::cout << "Starting MCMC..." << std::endl;
     for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
     std::cout << std::endl;
@@ -179,6 +142,9 @@ int main(int argc, char* argv[]) {
         // }
     }
 
+    std::cout << invGaussLogLike(rnlv(0.2, 0.05), 0.2, 0.1) <<
+     std::endl;
+
     /////////////////// DATA OUTPUT
     std::string filenamedata = "data.txt";
     std::string filenameLL = "LL.txt";
@@ -198,29 +164,95 @@ int main(int argc, char* argv[]) {
 }
 
 
+std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
+                const std::vector<double>& b)
+{
+    std::vector<double> result;
+    for (const auto& t : x) {
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 0.01*t[1]);
+    }
+    return result;
+}
+
+std::vector<double> modelfit(const std::vector<std::vector<double>>& x,
+                const std::vector<double>& b)
+{
+    std::vector<double> result;
+    for (const auto& t : x) {
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]);
+    }
+    return result;
+}
+
+Eigen::VectorXd s2e(const std::vector<double>& x) 
+{
+    Eigen::VectorXd eigV(x.size());
+        for (int i=0; i<x.size();++i) {eigV(i)=x[i];}
+        return eigV;
+}
+
+std::vector<double> rnv(const std::vector<double>& x,
+                const std::vector<double>& prop_s){
+    std::vector<double> prop(prop_s.size());
+    std::normal_distribution<> d0(0.0, 1.0);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    for (int k=0; k<prop_s.size(); ++k) {
+        prop[k] = x[k] + d0(gen) * prop_s[k];
+    }
+    return prop;
+};
 
 
+double rnlv(double m, double s) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::normal_distribution<double> d0(0.0, 1.0);
+    double z = d0(gen);
+    return std::exp(z * s + std::log(m));
+}
 
-    //////////////////// PARSING INPUT ARGS
-    // int num_data_points;
-    // if (argc > 1) {
-    //     try {
-    //         num_data_points = std::stoi(argv[1]);
-    //         if (num_data_points <= 0) {
-    //             std::cerr << 
-    //             "Error: Number of data points must be positive. Using default: " << 
-    //             100 << std::endl;
-    //             num_data_points = 100;
-    //         }
-    //     } catch (const std::invalid_argument& e) {
-    //         std::cerr << "Error: Invalid argument for number of data points. Using default: " << 
-    //         100 << std::endl;
-    //         num_data_points = 100;
-    //     } catch (const std::out_of_range& e) {
-    //         std::cerr << "Error: Number of data points out of range. Using default: " << 
-    //         100 << std::endl;
-    //         num_data_points = 100;
-    //     }
-    // } else { 
-    //     num_data_points = 100;
-    // }
+double invGaussLogLike(double x, double mu,
+     double loc, double scale) {
+    if (mu <= 0 || scale <= 0 || (x - loc) <= 0) {
+        return -std::numeric_limits<double>::infinity();
+    }
+
+    double y = (x - loc) / scale;
+
+    double term1 = -0.5 * std::log(2.0 * M_PI);
+    double term2 = -1.5 * std::log(y);
+    double term3_numerator = std::pow(y - mu, 2);
+    double term3_denominator = 2.0 * std::pow(mu, 2) * y;
+    double term3 = -term3_numerator / term3_denominator;
+
+    // Adjust for scale: log(f(y) / scale) = log(f(y)) - log(scale)
+    double log_pdf_standardized = term1 + term2 + term3;
+    double log_pdf_scaled = log_pdf_standardized - std::log(scale);
+
+    return log_pdf_scaled;
+}
+
+//////////////////// PARSING INPUT ARGS
+// int num_data_points;
+// if (argc > 1) {
+//     try {
+//         num_data_points = std::stoi(argv[1]);
+//         if (num_data_points <= 0) {
+//             std::cerr << 
+//             "Error: Number of data points must be positive. Using default: " << 
+//             100 << std::endl;
+//             num_data_points = 100;
+//         }
+//     } catch (const std::invalid_argument& e) {
+//         std::cerr << "Error: Invalid argument for number of data points. Using default: " << 
+//         100 << std::endl;
+//         num_data_points = 100;
+//     } catch (const std::out_of_range& e) {
+//         std::cerr << "Error: Number of data points out of range. Using default: " << 
+//         100 << std::endl;
+//         num_data_points = 100;
+//     }
+// } else { 
+//     num_data_points = 100;
+// }
