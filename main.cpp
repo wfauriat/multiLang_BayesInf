@@ -30,13 +30,13 @@ double rnlv(double m, double s);
 double invGaussLogLike(double x, double mu,
      double loc = 0.0, double scale = 1.0);
 
-// const auto covDiagMat = [](const double& stdV, int size){
-//     Eigen::MatrixXd cov(size, size);
-//     for (int i=0; i<size; ++i) {
-//         cov(i,i) = stdV;
-//     }
-//     return cov;
-// };
+const auto covDiagMat = [](const double& stdV, int size){
+    Eigen::MatrixXd cov(size, size);
+    for (int i=0; i<size; ++i) {
+        cov(i,i) = stdV;
+    }
+    return cov;
+};
 
 
 int main(int argc, char* argv[]) {
@@ -52,12 +52,14 @@ int main(int argc, char* argv[]) {
     std::vector<double> btest {1.5, -0.7, 1.5};
     double nslvl {0.2};
     double smod {0.2};
+    std::vector<double> sinvgauss {0.4, 0.2};
 
     std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5,
                               2.8, 4.0, 4.4, 5.2, 5.5};
     std::vector<std::vector<double>> xxmes(xmes.size(), {0.0, 0.0});
        for (int i=0; i<xmes.size(); ++i) {
         xxmes[i][0] = xmes[i];
+        xxmes[i][1] = d0(gen);
     }
     std::vector<double> ymes = modeltrue(xxmes, b0);
         for (int i=0; i<xmes.size(); ++i) {
@@ -66,10 +68,10 @@ int main(int argc, char* argv[]) {
     std::vector<double> ytheo = modelfit(xxmes, b0);
 
     // auto covMat = covDiagMat(smod, xmes.size());
-    Eigen::MatrixXd covMat(xmes.size(), xmes.size());
-    for (int i=0; i<xmes.size(); ++i) {
-        covMat(i,i) = nslvl;
-    }
+    // Eigen::MatrixXd covMat(xmes.size(), xmes.size());
+    // for (int i=0; i<xmes.size(); ++i) {
+    //     covMat(i,i) = nslvl;
+    // }
 
     std::cout << "XMES :" << std::endl;
     for (const auto& t : xxmes) {std::cout << t[0] << " ";} 
@@ -85,20 +87,27 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::vector<double>> bounds(3,{-5.0,5.0});
     std::vector<double> proposal_sd {0.2, 0.2, 0.05};
+    double proposal_sinvg {0.05};
 
     std::vector<std::vector<double>> MCchain(num_iterations,
                                      std::vector<double>(
                                         bounds[0].size(), 0.0));
-
+    std::vector<double> Schain(num_iterations, 0.0);
     std::vector<double> llchain(num_iterations, 0.0);
     
     MCchain[0] = btest;
+    Schain[0] = sinvgauss[0] + sinvgauss[1];
+    auto covMat = covDiagMat(Schain[0], xmes.size());
     llchain[0] = logfct::logLikelihood(s2e(ymes),
                     s2e(modelfit(xxmes, MCchain[0])), covMat);
-    double llold = llchain[0];
-    double lpold = logfct::log_prior(bounds, MCchain[0]); 
 
-    std::vector<double> xprop = rnv(MCchain[0], proposal_sd);    
+    double llold = llchain[0];
+    double lpold = logfct::log_prior(bounds, MCchain[0]);
+    double lsold = invGaussLogLike(Schain[0], sinvgauss[0], sinvgauss[1]);  
+
+    std::vector<double> xprop;
+    double sp;
+    double llprop, lpprop, lspp, ldiff;
 
     std::cout << "Starting MCMC..." << std::endl;
     for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
@@ -108,20 +117,26 @@ int main(int argc, char* argv[]) {
     {
         //////////////////// GENERATION OF PROPOSAL
         xprop = rnv(MCchain[i-1], proposal_sd);
-        double llprop = logfct::logLikelihood(s2e(ymes),
+        sp = rnlv(Schain[i-1], proposal_sinvg);
+        covMat = covDiagMat(sp, xmes.size());   
+        llprop = logfct::logLikelihood(s2e(ymes),
                             s2e(modelfit(xxmes, xprop)), covMat);
-        double lpprop = logfct::log_prior(bounds, xprop); 
-        double ldiff;
-        ldiff = llprop + lpprop - llold - lpold;
+        lpprop = logfct::log_prior(bounds, xprop);
+        lspp = invGaussLogLike(sp, sinvgauss[0], sinvgauss[1]);
+
+        ldiff = llprop + lpprop + lspp - llold - lpold - lsold;
 
         if (ldiff > std::log(du(gen))) {
             MCchain[i] = xprop;
             llchain[i] = llprop;
+            Schain[i] = sp;
             llold = llprop;
             lpold = lpprop;
+            lsold = lspp;
         }
         else {
             MCchain[i] = MCchain[i-1];
+            Schain[i] = Schain[i-1];
             llchain[i] = llchain[i-1];
         }
 
@@ -130,7 +145,8 @@ int main(int argc, char* argv[]) {
                         "/" << num_iterations << 
                         " (Current: b0=" << MCchain[i][0] << ", " <<
                         " b1=" << MCchain[i][1] << ", " <<
-                        " b2=" << MCchain[i][2] << ")" << std::endl;
+                        " b2=" << MCchain[i][2] <<
+                        " s=" << Schain[i] << ")" << std::endl;
         }
 
         // if (i%thin_factor == 0) {
@@ -142,8 +158,10 @@ int main(int argc, char* argv[]) {
         // }
     }
 
-    std::cout << invGaussLogLike(rnlv(0.2, 0.05), 0.2, 0.1) <<
-     std::endl;
+    // std::cout << "Inv gauss valid :" << std::endl;
+    // for (int i=0;i<10;++i) {std::cout << rnlv(0.6, 0.05) << " ";} 
+    // std::cout << std::endl;
+    // std::cout << invGaussLogLike(0.6, 0.4, 0.2) << std::endl;
 
     /////////////////// DATA OUTPUT
     std::string filenamedata = "data.txt";
@@ -155,7 +173,8 @@ int main(int argc, char* argv[]) {
         if (i%thin_factor == 0 && i > burn_in) {
         outputFiledata << MCchain[i][0] << "," <<
                           MCchain[i][1] << "," << 
-                          MCchain[i][2] << std::endl;
+                          MCchain[i][2] << "," << 
+                          Schain[i] << std::endl;
         outputFileLL << llchain[i] << std::endl;
         }
     }
@@ -163,6 +182,9 @@ int main(int argc, char* argv[]) {
     outputFileLL.close();
 }
 
+
+/////////////////////////////// FUNCTIONS DEFINITION ////////////////
+///////////////////////////////
 
 std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
                 const std::vector<double>& b)

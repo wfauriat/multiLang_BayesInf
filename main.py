@@ -17,7 +17,7 @@ import time as time
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 1*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 0.01*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
@@ -66,11 +66,11 @@ bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 ## PARAMETRIZATION OF MCMC
 NMCMC = 22000
 Nburn = 2000
-Nthin = 10
-Ntune = 20000
+Nthin = 20
+Ntune = 1000
 
-# sexp = [0.2, 0.2, 0.05]
-sexp = [1, 1, 0.2]
+sexp = [0.2, 0.2, 0.05]
+# sexp = [1, 1, 0.2]
 smexp = 0.05
 
 ## INITIALISATION OF MCMC
@@ -94,8 +94,8 @@ Nphase = [Ntune, NMCMC]
 for Ncur in Nphase:
     if Ncur == NMCMC: ## re-initialization for active MCMC after tuning
         nacc = 0
-        MCchain[Ntune-1,:Ndim] = xprop
-        MCchain[Ntune-1,Ndim] = sp
+        MCchain[0,:Ndim] = xprop
+        MCchain[0,Ndim] = sp
         llold = llchain[0]
         lpold = logprior(MCchain[0,:Ndim], punif)
         lsold = logsp(MCchain[0,Ndim], dist=smod)
@@ -188,13 +188,16 @@ ax.set_ylabel('y')
 ax.set_xlabel('x')
 ax.legend()
 
+fig.savefig("pythonpostobs.png", dpi=200)
+
 #%%############################################################################
 # VISUALISATION OF RESULT IN PARAMETER SPACE
 ###############################################################################
 
 startchain = False
 
-fig, ax = plt.subplots(4,4, figsize=(8,8))
+# fig, ax = plt.subplots(4,4, figsize=(8,8))
+fig, ax = plt.subplots(4,4)
 for i in range(4):
     for j in range(4):
         if j>i:
@@ -204,7 +207,7 @@ for i in range(4):
             ax[i,j].scatter(MCchainS[:,j], MCchainS[:,i],
                              c=llchainS[:],
                             marker='.', cmap='jet')
-            ax[i,j].plot(b0[j], b0[i], 's', color='k', ms=10, alpha=0.4)
+            # ax[i,j].plot(b0[j], b0[i], 's', color='k', ms=10, alpha=0.4)
             ax[i,j].plot(MAP[j], MAP[i], 'dk')
         elif j == i:
             ax[i,j].hist(MCchainS[:,j], edgecolor='k')
@@ -212,12 +215,13 @@ for i in range(4):
         else:
             ax[i,j].set_visible(False)
 
+fig.savefig("pythonpost.png", dpi=200)
 
 #%%############################################################################
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-diag = True
+diag = False
 
 if diag:
     l = 0
@@ -269,18 +273,23 @@ postgrid = np.array([sst.norm(loc=modelfit(
 
 post2Dm = postgrid.mean(axis=0).reshape([xg.shape[0], yg.shape[0]])
 post2Ds = postgrid.std(axis=0).reshape([xg.shape[0], yg.shape[0]])
-    
-fig = plt.figure(figsize=(12,12))
-ax = plt.axes(projection='3d')
-ax.plot_surface(xg, yg, zg, cmap='jet_r', alpha=0.5)
-for k in range(xmes.shape[0]):
-    ax.scatter(xmes[k,0], xmes[k,1], postY[-50:,k], c='k', marker='.')
-ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.4)
-ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.4)
-ax.scatter(xmes[:,0], xmes[:,1], ymes, c=ymes, cmap='jet_r')
-ax.view_init(0,-90)
-# ax.view_init(0,180)
-ax.set_proj_type('ortho')
-# ax.set_proj_type('persp')
+
+if False:    
+
+    fig = plt.figure(figsize=(12,12))
+    ax = plt.axes(projection='3d')
+    ax.plot_surface(xg, yg, zg, cmap='jet_r', alpha=0.5)
+    for k in range(xmes.shape[0]):
+        ax.scatter(xmes[k,0], xmes[k,1], postY[-50:,k], c='k', marker='.')
+    ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.4)
+    ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.4)
+    ax.scatter(xmes[:,0], xmes[:,1], ymes, c=ymes, cmap='jet_r')
+    ax.view_init(0,-90)
+    # ax.view_init(0,180)
+    ax.set_proj_type('ortho')
+    # ax.set_proj_type('persp')
 
 # %%
+
+# plt.show()
+print('MAP: ', str(MAP))

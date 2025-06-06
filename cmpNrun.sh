@@ -5,4 +5,4 @@ g++ helpervectmat.cpp logfcts.cpp main.cpp -g -o app -O2 \
 
 ./app
 
-python visu.py
+# python visu.py

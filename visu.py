@@ -23,27 +23,34 @@ data = np.loadtxt('data.txt', delimiter=',')
 LL = np.loadtxt('LL.txt')
 idL = np.argsort(LL)
 Ndim = data.shape[1]
+MAP = data[idL[-1],:]
 
 postY = np.array([sst.norm(loc=modelfit(xmes, data[i,:Ndim]),
                             scale=smod).rvs(xmes.shape[0])
                               for i in range(data.shape[0])])
 
+print('MAP: ', MAP)
 
-plt.close('all')
-fig, ax = plt.subplots(3,3)
-for j in range(3):
-    for i in range(3):
+# plt.close('all')
+fig, ax = plt.subplots(4,4)
+for j in range(4):
+    for i in range(4):
         if i<j:
             ax[i,j].scatter(data[idL,j], data[idL,i],
                              c=LL[idL], marker='.', cmap='jet')
+            ax[i,j].plot(MAP[j], MAP[i], 'dk')
         elif i==j:
             ax[i,j].hist(data[:,j], edgecolor='k')
         else:
             ax[i,j].set_visible(False)
 
-fig, ax2 = plt.subplots()
+fig.savefig("cpppost.png", dpi=200)
+
+fig2, ax2 = plt.subplots()
 ax2.plot(xmes[:,0], postY[-1:,:].T, '.k', label='posterior calibrated')
 ax2.plot(xmes[:,0], postY.T, '.k')
 ax2.plot(xmes[:,0], ymes, '.r', label='available observation')
 
-plt.show()
+fig2.savefig("cpppostobs.png", dpi=200)
+
+# plt.show()
