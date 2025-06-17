@@ -46,9 +46,17 @@ def logprior(par, dists):
     return np.sum([dists[i].logpdf(par) for i in range(len(par))])
 def logsp(s,dist): return np.max([dist.logpdf(s),-100])
 
-def rnv(m,s): return np.random.randn(len(m))*np.array(s)+np.array(m)
+# def rnv(m,s): return np.random.randn(len(m))*np.array(s)+np.array(m)
+def rnv1(m,s): return np.random.randn()*np.array(s)+m
 def rnlv(m,s): return np.exp(np.random.randn()*s+np.log(m))
 
+def rnvmultiD(m,Lmat):
+    # Lmat = np.linalg.cholesky(Cov)
+    return m + np.ravel(Lmat @ np.random.randn(m.shape[0],1))
+
+def covToCorr(Sig):
+    Dinv = np.diag(1/np.sqrt(np.diag(covProp)))
+    return Dinv @ Sig @ Dinv
 
 #%%############################################################################
 # IMPLEMENTATION OF INFERENCE ALGORITHM
@@ -56,28 +64,31 @@ def rnlv(m,s): return np.exp(np.random.randn()*s+np.log(m))
 
 ## SPECIFICATION OF PRACTICAL APPLICATION
 Ndim = 3
-pl = -5
-ph = 5
+pl = -3
+ph = 3
 punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 smod = sst.invgauss(0.4,0.2)
 
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 
 ## PARAMETRIZATION OF MCMC
-NMCMC = 22000
-Nburn = 2000
+NMCMC = 25000
+Nburn = 5000
 Nthin = 20
-Ntune = 1000
+Ntune = Nburn
 
-sexp = [0.2, 0.2, 0.05]
-# sexp = [1, 1, 0.2]
-smexp = 0.05
+covProp = np.eye(3)*1e-1
+LLTprop = np.linalg.cholesky(covProp)
+sm = np.array([0.1, 0.1, 0.1])
+
+smexp = 0.1
 
 ## INITIALISATION OF MCMC
 MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
 MCchain[0,:Ndim] = bstart
 MCchain[0,Ndim] = smod.mean()
+xprop = MCchain[0,:Ndim]
 # MCchain[0,Ndim] = 0.2
 llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
                       model=modelfit)
@@ -85,24 +96,61 @@ llold = llchain[0]
 lpold = logprior(MCchain[0,:Ndim], dists=punif)
 lsold = logsp(MCchain[0,Ndim], dist=smod)
 # lsold = 0
+
 nacc = 0
-tvacc = []
+naccmultiD = np.zeros((Ndim+1)) 
+
+talgo = "MHwG"
+# talgo = "MHmultiD"
+
+if talgo == "MHwG":
+    ## RUN OF Adaptative MC Within Gibbs
+    for i in range(1,NMCMC):
+        xprop = np.copy(MCchain[i-1,:Ndim])
+        sp = rnlv(MCchain[i-1,Ndim],smexp)
+        llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+        lspp = logsp(sp, dist=smod)
+        ldiff = llprop + lspp - llold - lsold
+        if ldiff > np.log(np.random.rand()):
+            if i>Nburn: naccmultiD[Ndim] += 1
+            MCchain[i,Ndim] = sp
+            llchain[i] = llprop
+            llold = llprop
+            lsold = lspp
+        else:
+            MCchain[i,Ndim] = MCchain[i-1,Ndim]
+            llchain[i] = llchain[i-1]
+        idj = np.random.permutation(Ndim)
+        for j in idj:
+            xprop[j] = rnv1(MCchain[i-1,j],sm[j])
+            llprop = loglike(ymes, xmes, xprop, MCchain[i,Ndim], model=modelfit)
+            lpprop = logprior(xprop, punif)
+            ldiff = llprop + lpprop - llold - lpold
+            if ldiff > np.log(np.random.rand()):
+                if i>Nburn: naccmultiD[j] += 1
+                MCchain[i,j] = xprop[j]
+                llchain[i] = llprop
+                llold = llprop
+                lpold = lpprop
+            else:
+                xprop[j] = MCchain[i-1,j]
+                MCchain[i,j] = xprop[j]
+                llchain[i] = llchain[i-1]
+        if (i%1000 == 0): print(i)
+        if (i%500 == 0) & (i<=Ntune):
+            for j in idj:
+                sm[j] = np.std(MCchain[i-500:i,j])*1
+                # sm[j] = np.sqrt(np.var(MCchain[i-500:i,j])*2.38**2/(Ndim-1))
+        
+    print("acceptation rate :", ["{:.2f}".format(naccmultiD[k]/(NMCMC-Nburn))
+                                for k in range(Ndim+1)])
+    print(sm)
 
 
-## RUN OF MCMC
-Nphase = [Ntune, NMCMC]
-for Ncur in Nphase:
-    if Ncur == NMCMC: ## re-initialization for active MCMC after tuning
-        nacc = 0
-        MCchain[0,:Ndim] = xprop
-        MCchain[0,Ndim] = sp
-        llold = llchain[0]
-        lpold = logprior(MCchain[0,:Ndim], punif)
-        lsold = logsp(MCchain[0,Ndim], dist=smod)
-        # lsold = 0
-    if Ncur == Ntune: tacc=0 
-    for i in range(1,Ncur): ## one chain for tuning another after tuning
-        xprop = rnv(MCchain[i-1,:Ndim],sexp)
+if talgo == "MHmultiD":
+    ## RUN OF Adaptative Metrolis MC
+    for i in range(1,NMCMC):
+        xprop = rnvmultiD(MCchain[i-1,:Ndim],LLTprop)
         sp = rnlv(MCchain[i-1,Ndim],smexp)
         # sp = 0.2
         llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
@@ -111,7 +159,6 @@ for Ncur in Nphase:
         # lspp = 0
         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
         if ldiff > np.log(np.random.rand()):
-            tacc +=1
             if i>Nburn: nacc += 1
             MCchain[i,:Ndim] = xprop
             MCchain[i,Ndim] = sp
@@ -123,20 +170,15 @@ for Ncur in Nphase:
             MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
             MCchain[i,Ndim] = MCchain[i-1,Ndim]
             llchain[i] = llchain[i-1]
-        if (i%1000 == 0) & (Ncur == Ntune): print(i, tacc/100, sexp)
-        if (i%1000 == 0) & (Ncur != Ntune): print(i)
-        if (i%100 == 0) & (Ncur == Ntune): ## fully proportional tuning of step size
-            tvacc.append(tacc/100)
-            if (tacc/100)<0.3:
-                # sexp[np.random.randint(3)] *= 0.9
-                sexp = [0.9*sexp[i] for i in range(Ndim)]
-            else:
-                # sexp[np.random.randint(3)] *= 1.1
-                sexp = [1.1*sexp[i] for i in range(Ndim)]
-            tacc = 0
-            
+        if (i%1000 == 0) : print(i)
+        if (i%500 == 0) & (i<=Ntune) :
+            covProp = np.cov(MCchain[i-500:i,:Ndim].T) 
+            LLTprop = np.linalg.cholesky(covProp * 2.38**2/(Ndim-1) +
+                                        np.eye(Ndim)*1e-8)
 
-print("acceptation rate :", "{:.2f}".format(nacc/(NMCMC-Nburn)))
+    print("acceptation rate :", "{:.2f}".format(nacc/(NMCMC-Nburn)))
+    print(np.sqrt(np.diag(covProp)))
+    print(covProp)
 
 #%%############################################################################
 # POSTPROCESSING OF RAW OUTPUT OF MCMC
@@ -160,6 +202,8 @@ postxplot = np.array([sst.norm(loc=modelfit(xplot, MCchainS[i,:Ndim]),
       for i in range(Ntot-Nppost,Ntot)])
 postMAP = sst.norm(loc=modelfit(xplot, MAP[:Ndim]),
                     scale=MAP[Ndim]).rvs(xplot.shape[0])
+
+
 
 #%%############################################################################
 # VISUALISATION OF RESULT IN OBSERVATION SPACE
@@ -221,7 +265,7 @@ fig.savefig("pythonpost.png", dpi=200)
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-diag = False
+diag = True
 
 if diag:
     l = 0
@@ -293,3 +337,4 @@ if False:
 
 # plt.show()
 print('MAP: ', str(MAP))
+# %%
