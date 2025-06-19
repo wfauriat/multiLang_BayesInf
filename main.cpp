@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     std::vector<double> b0 {2.0, -1.0, 2.0};
     // std::vector<double> btest {1.5, -0.7, 1.5};
     std::vector<double> btest {1, 1, 1};
-    double nslvl {0.002};
+    double nslvl {0.02};
     double smod {0.2};
     std::vector<double> sinvgauss {0.4, 0.2};
 
@@ -113,9 +113,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Starting MCMC..." << std::endl;
     for (int k=0;k<xprop.size();++k) {std::cout << MCchain[0][k] << " ";}
     std::cout << std::endl;
-    std::cout << "test loglike " << 
-        logfct::logLikelihood(s2e(ymes),
-                    s2e(modeltrue(xxmes, MCchain[0])), covMat) << std::endl;
+    // std::cout << "test loglike " << 
+    //     logfct::logLikelihood(s2e(ymes),
+    //                 s2e(modeltrue(xxmes, MCchain[0])), covMat) << std::endl;
 
     for (int i=1; i<num_iterations; ++i)
     {

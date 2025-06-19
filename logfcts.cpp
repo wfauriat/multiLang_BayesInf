@@ -59,8 +59,8 @@ double logLikelihoodVect(
     const Eigen::MatrixXd& sigma,
     bool verbose)
 {
-    // int N = data.rows();
-    int N = 1;
+    int N = data.rows();
+    // int N = 1;
     int D = data.cols();
 
     if (N == 0) {

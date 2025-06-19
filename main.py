@@ -23,7 +23,7 @@ def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
 
 b0 = [2, -1, 2, 0]
-nslvl = 0.002
+nslvl = 0.02
 
 xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
 xplot[:,1] = 1
@@ -70,7 +70,32 @@ def loglikenp(obs, var, par, sigma, model):
 
 def logprior(par, dists):
     return np.sum([dists[i].logpdf(par) for i in range(len(par))])
+
+def logpriornp(par, bounds):
+    bcheck = [(p > b[0]) & (p < b[1]) for (p,b) in zip(par, bounds)]
+    return 0 if all(bcheck) else -np.inf
+
+# test = logpriornp(bstart, np.repeat(np.c_[pl, ph],3, axis=0))
+# print(test)
+
 def logsp(s,dist): return np.max([dist.logpdf(s),-100])
+def logspnp(x, mu_scipy, loc, scale_scipy=1):
+    x_shifted = x - loc
+    nu = mu_scipy * scale_scipy
+    lambda_val = scale_scipy
+    log_pdf = (
+            0.5 * np.log(lambda_val)
+            - 0.5 * np.log(2 * np.pi)
+            - 1.5 * np.log(x_shifted)
+            - (lambda_val * np.power(x_shifted - nu, 2)) /
+              (2 * np.power(nu, 2) * x_shifted)
+        )
+    return -np.inf if np.isnan(log_pdf) else log_pdf
+
+# LOG1 = sst.invgauss(mu=0.4,loc=0.2).logpdf(0.6)
+# print(LOG1)
+# LOG2 = logspnp(-0.6, 0.4, 0.2)
+# print(LOG2)
 
 # def rnv(m,s): return np.random.randn(len(m))*np.array(s)+np.array(m)
 def rnv1(m,s): return np.random.randn()*np.array(s)+m
@@ -94,6 +119,7 @@ pl = -3
 ph = 3
 punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 smod = sst.invgauss(0.4,0.2)
+sinvg = [0.4, 0.2]
 
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 # bstart = np.array([1.5,-0.7,1.5])
@@ -117,11 +143,16 @@ MCchain[0,:Ndim] = bstart
 MCchain[0,Ndim] = smod.mean()
 xprop = MCchain[0,:Ndim]
 # MCchain[0,Ndim] = 0.2
-llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
+# llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
+#                       model=modelfit)
+llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
+                      np.diag((MCchain[0,Ndim]**2)*np.ones(ymes.shape[0])),
                       model=modelfit)
 llold = llchain[0]
-lpold = logprior(MCchain[0,:Ndim], dists=punif)
-lsold = logsp(MCchain[0,Ndim], dist=smod)
+# lpold = logprior(MCchain[0,:Ndim], dists=punif)
+lpold = logpriornp(MCchain[0,:Ndim], np.repeat(np.c_[pl, ph],3, axis=0))
+# lsold = logsp(MCchain[0,Ndim], dist=smod)
+lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
 # lsold = 0
 
 nacc = 0
@@ -135,8 +166,12 @@ if talgo == "MHwG":
     for i in range(1,NMCMC):
         xprop = np.copy(MCchain[i-1,:Ndim])
         sp = rnlv(MCchain[i-1,Ndim],smexp)
-        llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
-        lspp = logsp(sp, dist=smod)
+        # llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+        llprop = loglikenp(ymes, xmes, xprop,
+                      np.diag((sp**2)*np.ones(ymes.shape[0])),
+                      model=modelfit)
+        # lspp = logsp(sp, dist=smod)
+        lspp = logspnp(sp, sinvg[0], sinvg[1])
         ldiff = llprop + lspp - llold - lsold
         if ldiff > np.log(np.random.rand()):
             if i>Nburn: naccmultiD[Ndim] += 1
@@ -150,8 +185,12 @@ if talgo == "MHwG":
         idj = np.random.permutation(Ndim)
         for j in idj:
             xprop[j] = rnv1(MCchain[i-1,j],sm[j])
-            llprop = loglike(ymes, xmes, xprop, MCchain[i,Ndim], model=modelfit)
-            lpprop = logprior(xprop, punif)
+            # llprop = loglike(ymes, xmes, xprop, MCchain[i,Ndim], model=modelfit)
+            llprop = loglikenp(ymes, xmes, xprop,
+                np.diag((sp**2)*np.ones(ymes.shape[0])),
+                model=modelfit)
+            # lpprop = logprior(xprop, punif)
+            lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
             ldiff = llprop + lpprop - llold - lpold
             if ldiff > np.log(np.random.rand()):
                 if i>Nburn: naccmultiD[j] += 1
@@ -180,9 +219,14 @@ if talgo == "MHmultiD":
         xprop = rnvmultiD(MCchain[i-1,:Ndim],LLTprop)
         sp = rnlv(MCchain[i-1,Ndim],smexp)
         # sp = 0.2
-        llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
-        lpprop = logprior(xprop, punif)
-        lspp = logsp(sp, dist=smod)
+        # llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+        llprop = loglikenp(ymes, xmes, xprop,
+                np.diag((sp**2)*np.ones(ymes.shape[0])),
+                model=modelfit)
+        # lpprop = logprior(xprop, punif)
+        lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
+        # lspp = logsp(sp, dist=smod)
+        lspp = logspnp(sp, sinvg[0], sinvg[1])
         # lspp = 0
         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
         if ldiff > np.log(np.random.rand()):
