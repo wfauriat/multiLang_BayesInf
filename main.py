@@ -23,7 +23,7 @@ def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
 
 b0 = [2, -1, 2, 0]
-nslvl = 0.2
+nslvl = 0.002
 
 xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
 xplot[:,1] = 1
@@ -41,6 +41,32 @@ ymes += sst.norm().rvs(xmes.shape[0])*nslvl
 def loglike(obs, var, par, smod, model):
     return np.sum(
         sst.norm(loc=model(var, par), scale=smod).logpdf(obs))
+
+
+# sigma = np.diag((smod.mean()**2)*np.ones(ymes.shape[0]))
+# # bstart = np.array([1.5,-0.7,1.5])
+# bstart = np.array([1,1,1])
+
+def loglikenp(obs, var, par, sigma, model):
+    obs = obs.reshape(-1,1)
+    try:
+        L = np.linalg.cholesky(sigma)
+    except np.linalg.LinAlgError:
+        raise ValueError("Covariance matrix is not positive semi-definite "+
+                         "(cannot perform Cholesky decomposition).")
+    log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
+    diff = model(var,par).reshape(-1,1) - obs
+    y = np.linalg.solve(L, diff)
+    mahalanobis_term = np.sum(y**2)
+    log_likelihood = -0.5 * sigma.shape[0] * np.log(2*np.pi) + \
+                    -0.5 * log_det_sigma + \
+                    - 0.5 * mahalanobis_term
+    return log_likelihood
+
+# LOG1 = sst.multivariate_normal(
+#     mean=modeltrue(xmes,bstart),cov=sigma).logpdf(ymes)
+# LOG2 = loglikenp(ymes, xmes, bstart, sigma, modeltrue)
+# print(LOG1, LOG2)
 
 def logprior(par, dists):
     return np.sum([dists[i].logpdf(par) for i in range(len(par))])
@@ -70,6 +96,7 @@ punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 smod = sst.invgauss(0.4,0.2)
 
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
+# bstart = np.array([1.5,-0.7,1.5])
 
 ## PARAMETRIZATION OF MCMC
 NMCMC = 25000
@@ -100,8 +127,8 @@ lsold = logsp(MCchain[0,Ndim], dist=smod)
 nacc = 0
 naccmultiD = np.zeros((Ndim+1)) 
 
-talgo = "MHwG"
-# talgo = "MHmultiD"
+# talgo = "MHwG"
+talgo = "MHmultiD"
 
 if talgo == "MHwG":
     ## RUN OF Adaptative MC Within Gibbs
