@@ -44,6 +44,23 @@ for j in range(4):
         else:
             ax[i,j].set_visible(False)
 
+# ax[0,1].set_xlim(-2.5,1)
+# ax[0,2].set_xlim(1.5,3)
+# ax[1,2].set_xlim(1.5,3)
+# ax[0,3].set_xlim(0.2,1)
+# ax[1,3].set_xlim(0.2,1)
+# ax[2,3].set_xlim(0.2,1)
+# ax[0,1].set_ylim(-1,3)
+# ax[0,2].set_ylim(-1,3)
+# ax[0,3].set_ylim(-1,3)
+# ax[1,2].set_ylim(-2.5,1)
+# ax[1,3].set_ylim(-2.5,1)
+# ax[2,3].set_ylim(1.5,3)
+# ax[0,0].set_xlim(-1,3)
+# ax[1,1].set_xlim(-2.5,1)
+# ax[2,2].set_xlim(1.5,3)
+# ax[3,3].set_xlim(0.2,1)
+
 fig.savefig("cpppost.png", dpi=200)
 
 fig2, ax2 = plt.subplots()

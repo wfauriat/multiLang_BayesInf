@@ -17,19 +17,21 @@ import time as time
 ###############################################################################
 
 def modeltrue(x,b):
-    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 0.01*x[:,1]
+    return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 1*x[:,1]
 
 def modelfit(x,b):
     return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
 
 b0 = [2, -1, 2, 0]
-nslvl = 0.02
+nslvl = 0.2
+nsp1 = 0.1
+biasp1 = -1
 
 xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
 xplot[:,1] = 1
 
 xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
-                 np.c_[sst.norm(loc=0, scale=1).rvs(10)]])
+                 biasp1+nsp1*np.c_[sst.norm(loc=0, scale=1).rvs(10)]])
 ymes = modeltrue(xmes, b0)
 ymes += sst.norm().rvs(xmes.shape[0])*nslvl
 
@@ -118,8 +120,8 @@ Ndim = 3
 pl = -3
 ph = 3
 punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
-smod = sst.invgauss(0.4,0.2)
-sinvg = [0.4, 0.2]
+# smod = sst.invgauss(0.4,0.2)
+sinvg = [0.4, 0.3]
 
 bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 # bstart = np.array([1.5,-0.7,1.5])
@@ -140,7 +142,8 @@ smexp = 0.1
 MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
 MCchain[0,:Ndim] = bstart
-MCchain[0,Ndim] = smod.mean()
+# MCchain[0,Ndim] = smod.mean()
+MCchain[0,Ndim] = sinvg[0] + sinvg[1]
 xprop = MCchain[0,:Ndim]
 # MCchain[0,Ndim] = 0.2
 # llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
@@ -158,8 +161,8 @@ lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
 nacc = 0
 naccmultiD = np.zeros((Ndim+1)) 
 
-# talgo = "MHwG"
-talgo = "MHmultiD"
+talgo = "MHwG"
+# talgo = "MHmultiD"
 
 if talgo == "MHwG":
     ## RUN OF Adaptative MC Within Gibbs
@@ -329,6 +332,24 @@ for i in range(4):
             ax[i,j].set_xlabel('b' + str(i))
         else:
             ax[i,j].set_visible(False)
+
+
+# ax[0,1].set_xlim(-2.5,1)
+# ax[0,2].set_xlim(1.5,3)
+# ax[1,2].set_xlim(1.5,3)
+# ax[0,3].set_xlim(0.2,1)
+# ax[1,3].set_xlim(0.2,1)
+# ax[2,3].set_xlim(0.2,1)
+# ax[0,1].set_ylim(-1,3)
+# ax[0,2].set_ylim(-1,3)
+# ax[0,3].set_ylim(-1,3)
+# ax[1,2].set_ylim(-2.5,1)
+# ax[1,3].set_ylim(-2.5,1)
+# ax[2,3].set_ylim(1.5,3)
+# ax[0,0].set_xlim(-1,3)
+# ax[1,1].set_xlim(-2.5,1)
+# ax[2,2].set_xlim(1.5,3)
+# ax[3,3].set_xlim(0.2,1)
 
 fig.savefig("pythonpost.png", dpi=200)
 

@@ -51,16 +51,18 @@ int main(int argc, char* argv[]) {
     std::vector<double> b0 {2.0, -1.0, 2.0};
     // std::vector<double> btest {1.5, -0.7, 1.5};
     std::vector<double> btest {1, 1, 1};
-    double nslvl {0.02};
+    double nslvl {0.2};
+    double nsp1 {0.1};
+    double biasp1 {-1};
     double smod {0.2};
-    std::vector<double> sinvgauss {0.4, 0.2};
+    std::vector<double> sinvgauss {0.4, 0.3};
 
     std::vector<double> xmes {0.0, 0.5, 1.0, 2.0, 2.5,
                               2.8, 4.0, 4.4, 5.2, 5.5};
     std::vector<std::vector<double>> xxmes(xmes.size(), {0.0, 0.0});
        for (int i=0; i<xmes.size(); ++i) {
         xxmes[i][0] = xmes[i];
-        xxmes[i][1] = d0(gen);
+        xxmes[i][1] = d0(gen)*nsp1 + biasp1;
     }
     std::vector<double> ymes = modeltrue(xxmes, b0);
         for (int i=0; i<xmes.size(); ++i) {
@@ -76,6 +78,8 @@ int main(int argc, char* argv[]) {
 
     std::cout << "XMES :" << std::endl;
     for (const auto& t : xxmes) {std::cout << t[0] << " ";} 
+    std::cout << std::endl;
+    for (const auto& t : xxmes) {std::cout << t[1] << " ";} 
     std::cout << std::endl;
     std::cout << "YMES :" << std::endl;
     for (const auto& t : ymes) {std::cout << t << " ";} 
@@ -195,7 +199,7 @@ std::vector<double> modeltrue(const std::vector<std::vector<double>>& x,
 {
     std::vector<double> result;
     for (const auto& t : x) {
-        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 0.01*t[1]);
+        result.push_back(b[0] + b[1]*t[0] + b[2]*t[0]*t[0]+ 1*t[1]);
     }
     return result;
 }
