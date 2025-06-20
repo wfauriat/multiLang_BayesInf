@@ -1,13 +1,13 @@
 #%%############################################################################
 # REQUIREMENT PACKAGE IMPORT
 ###############################################################################
+
 import numpy as np
 # import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits import mplot3d
 import scipy.stats as sst
-
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
@@ -31,7 +31,7 @@ def ishigami(x,b):
                b[:,1]*np.sin(x[:,0])*x[:,2]**4] 
 
 
-Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(100),
+Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(200),
                         [-3, -3, -3, 0, 0], [3, 3, 3, 10, 1])
 ytrain = ishigami(Xtrain[:,:3],Xtrain[:,3:])
 
@@ -151,15 +151,19 @@ loglikenp(ymesishi, XX, b3, np.diag((0.2**2)*np.ones(ymesishi.shape[0])),
 ###############################################################################
 
 ## SPECIFICATION OF PRACTICAL APPLICATION
-Ndim = 3
+# Ndim = 3
+Ndim = 2
 pl = -3
 ph = 3
+# bounds = np.repeat(np.c_[pl, ph],3, axis=0)
+bounds = np.array([[0, 10],[0, 1]])
 # punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 # smod = sst.invgauss(0.4,0.2)
-sinvg = [0.4, 0.3]
+sinvg = [0.2, 0.1]
 
-bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
+# bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 # bstart = np.array([1.5,-0.7,1.5])
+bstart = [4, 0.2]
 
 ## PARAMETRIZATION OF MCMC
 NMCMC = 25000
@@ -167,11 +171,17 @@ Nburn = 5000
 Nthin = 20
 Ntune = Nburn
 
-covProp = np.eye(3)*1e-1
+# covProp = np.eye(Ndim)*1e-1
+covProp = np.array([[0.05,0],[0,0.01]])
 LLTprop = np.linalg.cholesky(covProp)
-sm = np.array([0.1, 0.1, 0.1])
+# sm = np.array([1]*Ndim)
+sm = [0.1, 1e-2]
 
 smexp = 0.1
+
+ymes = ymesishi
+modelfit = modelgp
+xmes = XX
 
 ## INITIALISATION OF MCMC
 MCchain = np.zeros((NMCMC, Ndim+1))
@@ -186,7 +196,7 @@ llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
                       np.diag((MCchain[0,Ndim]**2)*np.ones(ymes.shape[0])),
                       model=modelfit)
 llold = llchain[0]
-lpold = logpriornp(MCchain[0,:Ndim], np.repeat(np.c_[pl, ph],3, axis=0))
+lpold = logpriornp(MCchain[0,:Ndim], bounds=bounds)
 lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
 # lsold = 0
 
@@ -223,7 +233,7 @@ if talgo == "MHwG":
             llprop = loglikenp(ymes, xmes, xprop,
                 np.diag((sp**2)*np.ones(ymes.shape[0])),
                 model=modelfit)
-            lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
+            lpprop = logpriornp(xprop, bounds=bounds)
             ldiff = llprop + lpprop - llold - lpold
             if ldiff > np.log(np.random.rand()):
                 if i>Nburn: naccmultiD[j] += 1
@@ -282,6 +292,145 @@ if talgo == "MHmultiD":
     print(np.sqrt(np.diag(covProp)))
     print(covProp)
 
+
+
+# #%%############################################################################
+# # IMPLEMENTATION OF INFERENCE ALGORITHM
+# ###############################################################################
+
+# ## SPECIFICATION OF PRACTICAL APPLICATION
+# Ndim = 3
+# pl = -3
+# ph = 3
+# # punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
+# # smod = sst.invgauss(0.4,0.2)
+# sinvg = [0.4, 0.3]
+
+# bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
+# # bstart = np.array([1.5,-0.7,1.5])
+
+# ## PARAMETRIZATION OF MCMC
+# NMCMC = 25000
+# Nburn = 5000
+# Nthin = 20
+# Ntune = Nburn
+
+# covProp = np.eye(3)*1e-1
+# LLTprop = np.linalg.cholesky(covProp)
+# sm = np.array([0.1, 0.1, 0.1])
+
+# smexp = 0.1
+
+# ## INITIALISATION OF MCMC
+# MCchain = np.zeros((NMCMC, Ndim+1))
+# llchain = np.zeros(NMCMC)
+# MCchain[0,:Ndim] = bstart
+# MCchain[0,Ndim] = sinvg[0] + sinvg[1]
+# xprop = MCchain[0,:Ndim]
+# # MCchain[0,Ndim] = 0.2
+# # llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
+# #                       model=modelfit)
+# llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
+#                       np.diag((MCchain[0,Ndim]**2)*np.ones(ymes.shape[0])),
+#                       model=modelfit)
+# llold = llchain[0]
+# lpold = logpriornp(MCchain[0,:Ndim], np.repeat(np.c_[pl, ph],3, axis=0))
+# lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
+# # lsold = 0
+
+# nacc = 0
+# naccmultiD = np.zeros((Ndim+1)) 
+
+# # talgo = "MHwG"
+# talgo = "MHmultiD"
+
+# if talgo == "MHwG":
+#     ## RUN OF Adaptative MC Within Gibbs
+#     for i in range(1,NMCMC):
+#         xprop = np.copy(MCchain[i-1,:Ndim])
+#         sp = rnlv(MCchain[i-1,Ndim],smexp)
+#         # llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+#         llprop = loglikenp(ymes, xmes, xprop,
+#                       np.diag((sp**2)*np.ones(ymes.shape[0])),
+#                       model=modelfit)
+#         lspp = logspnp(sp, sinvg[0], sinvg[1])
+#         ldiff = llprop + lspp - llold - lsold
+#         if ldiff > np.log(np.random.rand()):
+#             if i>Nburn: naccmultiD[Ndim] += 1
+#             MCchain[i,Ndim] = sp
+#             llchain[i] = llprop
+#             llold = llprop
+#             lsold = lspp
+#         else:
+#             MCchain[i,Ndim] = MCchain[i-1,Ndim]
+#             llchain[i] = llchain[i-1]
+#         idj = np.random.permutation(Ndim)
+#         for j in idj:
+#             xprop[j] = rnv1(MCchain[i-1,j],sm[j])
+#             # llprop = loglike(ymes, xmes, xprop, MCchain[i,Ndim], model=modelfit)
+#             llprop = loglikenp(ymes, xmes, xprop,
+#                 np.diag((sp**2)*np.ones(ymes.shape[0])),
+#                 model=modelfit)
+#             lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
+#             ldiff = llprop + lpprop - llold - lpold
+#             if ldiff > np.log(np.random.rand()):
+#                 if i>Nburn: naccmultiD[j] += 1
+#                 MCchain[i,j] = xprop[j]
+#                 llchain[i] = llprop
+#                 llold = llprop
+#                 lpold = lpprop
+#             else:
+#                 xprop[j] = MCchain[i-1,j]
+#                 MCchain[i,j] = xprop[j]
+#                 llchain[i] = llchain[i-1]
+#         if (i%1000 == 0): print(i)
+#         if (i%500 == 0) & (i<=Ntune):
+#             for j in idj:
+#                 sm[j] = np.std(MCchain[i-500:i,j])*1
+#                 # sm[j] = np.sqrt(np.var(MCchain[i-500:i,j])*2.38**2/(Ndim-1))
+        
+#     print("acceptation rate :", ["{:.2f}".format(naccmultiD[k]/(NMCMC-Nburn))
+#                                 for k in range(Ndim+1)])
+#     print(sm)
+
+
+# if talgo == "MHmultiD":
+#     ## RUN OF Adaptative Metrolis MC
+#     for i in range(1,NMCMC):
+#         xprop = rnvmultiD(MCchain[i-1,:Ndim],LLTprop)
+#         sp = rnlv(MCchain[i-1,Ndim],smexp)
+#         # sp = 0.2
+#         # llprop = loglike(ymes, xmes, xprop, sp, model=modelfit)
+#         llprop = loglikenp(ymes, xmes, xprop,
+#                 np.diag((sp**2)*np.ones(ymes.shape[0])),
+#                 model=modelfit)
+#         lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
+#         lspp = logspnp(sp, sinvg[0], sinvg[1])
+#         # lspp = 0
+#         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
+#         if ldiff > np.log(np.random.rand()):
+#             if i>Nburn: nacc += 1
+#             MCchain[i,:Ndim] = xprop
+#             MCchain[i,Ndim] = sp
+#             llchain[i] = llprop
+#             llold = llprop
+#             lpold = lpprop
+#             lsold = lspp
+#         else:
+#             MCchain[i,:Ndim] = MCchain[i-1,:Ndim]
+#             MCchain[i,Ndim] = MCchain[i-1,Ndim]
+#             llchain[i] = llchain[i-1]
+#         if (i%1000 == 0) : print(i)
+#         if (i%500 == 0) & (i<=Ntune) :
+#             covProp = np.cov(MCchain[i-500:i,:Ndim].T) 
+#             LLTprop = np.linalg.cholesky(covProp * 2.38**2/(Ndim-1) +
+#                                         np.eye(Ndim)*1e-8)
+
+#     print("acceptation rate :", "{:.2f}".format(nacc/(NMCMC-Nburn)))
+#     print(np.sqrt(np.diag(covProp)))
+#     print(covProp)
+
+
 #%%############################################################################
 # POSTPROCESSING OF RAW OUTPUT OF MCMC
 ###############################################################################
@@ -297,13 +446,13 @@ Nppost = Ntot
 postY = np.array([sst.norm(loc=modelfit(xmes, MCchainS[i,:Ndim]),
                             scale=MCchainS[i,Ndim]).rvs(xmes.shape[0])
                               for i in range(Ntot-Nppost, Ntot)])
-postxplotm = np.array([modelfit(xplot, MCchainS[i,:Ndim])
-      for i in range(Ntot-Nppost,Ntot)])
-postxplot = np.array([sst.norm(loc=modelfit(xplot, MCchainS[i,:Ndim]),
-                            scale=MCchainS[i,Ndim]).rvs(xplot.shape[0])
-      for i in range(Ntot-Nppost,Ntot)])
-postMAP = sst.norm(loc=modelfit(xplot, MAP[:Ndim]),
-                    scale=MAP[Ndim]).rvs(xplot.shape[0])
+# postxplotm = np.array([modelfit(xplot, MCchainS[i,:Ndim])
+#       for i in range(Ntot-Nppost,Ntot)])
+# postxplot = np.array([sst.norm(loc=modelfit(xplot, MCchainS[i,:Ndim]),
+#                             scale=MCchainS[i,Ndim]).rvs(xplot.shape[0])
+#       for i in range(Ntot-Nppost,Ntot)])
+# postMAP = sst.norm(loc=modelfit(xplot, MAP[:Ndim]),
+#                     scale=MAP[Ndim]).rvs(xplot.shape[0])
 
 
 
@@ -317,19 +466,19 @@ fig, ax = plt.subplots()
 ax.plot(xmes[:,l], postY[-1:,:].T, '.k', label='posterior calibrated')
 ax.plot(xmes[:,l], postY[-Nppost:,:].T, '.k')
 ax.plot(xmes[:,l], ymes, '.r', label='available observation')
-ax.plot(xplot[:,l], modeltrue(xplot, b0), '-b', label='true function (y-slice)')
-ax.plot(xplot[:,l], modelfit(xplot, MAP), '--k', label='MAP mean')
+# ax.plot(xplot[:,l], modeltrue(xplot, b0), '-b', label='true function (y-slice)')
+# ax.plot(xplot[:,l], modelfit(xplot, MAP), '--k', label='MAP mean')
 # ax.plot(xplot[:,l], postMAP, '+k', label='MAP draw')
-ax.fill_between(xplot[:,l],
-                y1=postxplot.mean(axis=0) + 2*postxplot.std(axis=0),
-                y2=postxplot.mean(axis=0) - 2*postxplot.std(axis=0),
-                color='m', alpha=0.3,
-                label="posterior")
-ax.fill_between(xplot[:,l],
-                y1=postxplotm.mean(axis=0) + 2*postxplotm.std(axis=0),
-                y2=postxplotm.mean(axis=0) - 2*postxplotm.std(axis=0),
-                  color='g', alpha=0.6,
-                label="posterior model no noise")
+# ax.fill_between(xplot[:,l],
+#                 y1=postxplot.mean(axis=0) + 2*postxplot.std(axis=0),
+#                 y2=postxplot.mean(axis=0) - 2*postxplot.std(axis=0),
+#                 color='m', alpha=0.3,
+#                 label="posterior")
+# ax.fill_between(xplot[:,l],
+#                 y1=postxplotm.mean(axis=0) + 2*postxplotm.std(axis=0),
+#                 y2=postxplotm.mean(axis=0) - 2*postxplotm.std(axis=0),
+#                   color='g', alpha=0.6,
+#                 label="posterior model no noise")
 ax.set_ylabel('y')
 ax.set_xlabel('x')
 ax.legend()
@@ -343,9 +492,9 @@ fig.savefig("pythonpostobs.png", dpi=200)
 startchain = False
 
 # fig, ax = plt.subplots(4,4, figsize=(8,8))
-fig, ax = plt.subplots(4,4)
-for i in range(4):
-    for j in range(4):
+fig, ax = plt.subplots(3,3)
+for i in range(3):
+    for j in range(3):
         if j>i:
             if startchain:
                 ax[i,j].plot(MCchain[:Nburn,j], MCchain[:Nburn,i],'-k',
@@ -385,7 +534,7 @@ fig.savefig("pythonpost.png", dpi=200)
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-diag = True
+diag = False
 
 if diag:
     l = 0
@@ -423,35 +572,35 @@ if diag:
 # VISUALISATION WITH TWO DIMENSION CASE
 ###############################################################################
 
-nplot = 20
+# nplot = 20
 
-xg, yg = np.meshgrid(np.linspace(0,6,nplot), np.linspace(-3,3,nplot))
-zg = np.array([modeltrue(np.atleast_2d([el0, el1]), b0)
-                for el0, el1 in zip(xg.ravel(),yg.ravel())]).reshape(
-                    [xg.shape[0], yg.shape[0]])
+# xg, yg = np.meshgrid(np.linspace(0,6,nplot), np.linspace(-3,3,nplot))
+# zg = np.array([modeltrue(np.atleast_2d([el0, el1]), b0)
+#                 for el0, el1 in zip(xg.ravel(),yg.ravel())]).reshape(
+#                     [xg.shape[0], yg.shape[0]])
 
-postgrid = np.array([sst.norm(loc=modelfit(
-                            np.vstack([xg.ravel(), yg.ravel()]).T, MCf[k,:Ndim]),
-                                    scale=MCf[k,Ndim]).rvs()
-                for k in range(Ntot)])
+# postgrid = np.array([sst.norm(loc=modelfit(
+#                             np.vstack([xg.ravel(), yg.ravel()]).T, MCf[k,:Ndim]),
+#                                     scale=MCf[k,Ndim]).rvs()
+#                 for k in range(Ntot)])
 
-post2Dm = postgrid.mean(axis=0).reshape([xg.shape[0], yg.shape[0]])
-post2Ds = postgrid.std(axis=0).reshape([xg.shape[0], yg.shape[0]])
+# post2Dm = postgrid.mean(axis=0).reshape([xg.shape[0], yg.shape[0]])
+# post2Ds = postgrid.std(axis=0).reshape([xg.shape[0], yg.shape[0]])
 
-if False:    
+# if False:    
 
-    fig = plt.figure(figsize=(12,12))
-    ax = plt.axes(projection='3d')
-    ax.plot_surface(xg, yg, zg, cmap='jet_r', alpha=0.5)
-    for k in range(xmes.shape[0]):
-        ax.scatter(xmes[k,0], xmes[k,1], postY[-50:,k], c='k', marker='.')
-    ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.4)
-    ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.4)
-    ax.scatter(xmes[:,0], xmes[:,1], ymes, c=ymes, cmap='jet_r')
-    ax.view_init(0,-90)
-    # ax.view_init(0,180)
-    ax.set_proj_type('ortho')
-    # ax.set_proj_type('persp')
+#     fig = plt.figure(figsize=(12,12))
+#     ax = plt.axes(projection='3d')
+#     ax.plot_surface(xg, yg, zg, cmap='jet_r', alpha=0.5)
+#     for k in range(xmes.shape[0]):
+#         ax.scatter(xmes[k,0], xmes[k,1], postY[-50:,k], c='k', marker='.')
+#     ax.scatter(xg, yg, post2Dm + 2*post2Ds, marker='.', color='k', alpha=0.4)
+#     ax.scatter(xg, yg, post2Dm - 2*post2Ds, marker='+', color='k', alpha=0.4)
+#     ax.scatter(xmes[:,0], xmes[:,1], ymes, c=ymes, cmap='jet_r')
+#     ax.view_init(0,-90)
+#     # ax.view_init(0,180)
+#     ax.set_proj_type('ortho')
+#     # ax.set_proj_type('persp')
 
 # %%
 
