@@ -33,6 +33,9 @@ def ishigami(x,b):
 
 Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(200),
                         [-3, -3, -3, 0, 0], [3, 3, 3, 10, 1])
+DXtrain = Xtrain.max(axis=0) - Xtrain.min(axis=0)
+lowD = DXtrain/20
+highD = DXtrain*5
 ytrain = ishigami(Xtrain[:,:3],Xtrain[:,3:])
 
 XX = np.array([[0,0,0],
@@ -47,8 +50,11 @@ XX = np.array([[0,0,0],
                [1,1,-2]])
 b3 = np.array([5,0.5])
 
-kernel = RBF([1.0]*5, [(1e-5, 1e5) for _ in range(5)]) + \
-    WhiteKernel(noise_level=0.001,noise_level_bounds=(1e-5,1e-2))
+
+kernel = RBF([1.0]*5, 
+             [(el1, el2) for el1,el2 in zip(lowD, highD)]) + \
+    WhiteKernel(noise_level=0.001,
+                noise_level_bounds=(1e-6,np.var(ytrain)*0.05))
 
 gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
 gp.fit(Xtrain, ytrain)
@@ -61,12 +67,14 @@ def modelgp(x, b):
     return gp.predict(np.hstack([x,
                     np.repeat(np.r_[[b]],x.shape[0], axis=0)]))
 
-# fig, ax = plt.subplots()
-# ax.plot(XX[:,0], ytrue, 'or')
-# ax.plot(XX[:,0], ypred, '.b')
-# axx = ax.twiny()
-# axx.plot(ytrue, ypred, '+k')
-# axx.plot(ytrue, ytrue, '+-k')
+fig, ax = plt.subplots()
+ax.plot(XX[:,0], ytrue, 'or')
+ax.plot(XX[:,0], ypred, '.b')
+axx = ax.twiny()
+axx.plot(ytrue, ypred, '+k')
+axx.plot(ytrue, ytrue, '+-k')
+ax.set_title('Q2emp=' + \
+             str(np.round(1-np.var(ytrue.ravel()-ypred)/np.var(ypred),3)))
 
 b0 = [2, -1, 2, 0]
 nslvl = 0.2
@@ -115,9 +123,9 @@ def loglikenp(obs, var, par, sigma, model):
 
 def logpriornp(par, bounds):
     bcheck = [(p > b[0]) & (p < b[1]) for (p,b) in zip(par, bounds)]
-    return 0 if all(bcheck) else -np.inf
+    return 0 if all(bcheck) else -1000
 
-def logspnp(x, mu_scipy, loc, scale_scipy=1):
+def logspnp(x, mu_scipy, loc, scale_scipy=10):
     x_shifted = x - loc
     nu = mu_scipy * scale_scipy
     lambda_val = scale_scipy
@@ -128,7 +136,7 @@ def logspnp(x, mu_scipy, loc, scale_scipy=1):
             - (lambda_val * np.power(x_shifted - nu, 2)) /
               (2 * np.power(nu, 2) * x_shifted)
         )
-    return -np.inf if np.isnan(log_pdf) else log_pdf
+    return -1000 if np.isnan(log_pdf) else log_pdf
 
 
 # def rnv(m,s): return np.random.randn(len(m))*np.array(s)+np.array(m)
@@ -159,11 +167,12 @@ ph = 3
 bounds = np.array([[0, 10],[0, 1]])
 # punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 # smod = sst.invgauss(0.4,0.2)
-sinvg = [0.2, 0.1]
+sinvg = [0.05, 0.01]
+scinvg = 10
 
 # bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
 # bstart = np.array([1.5,-0.7,1.5])
-bstart = [4, 0.2]
+bstart = [2, 0.2]
 
 ## PARAMETRIZATION OF MCMC
 NMCMC = 25000
@@ -172,12 +181,12 @@ Nthin = 20
 Ntune = Nburn
 
 # covProp = np.eye(Ndim)*1e-1
-covProp = np.array([[0.05,0],[0,0.01]])
+covProp = np.array([[0.2,0],[0,0.05]])
 LLTprop = np.linalg.cholesky(covProp)
 # sm = np.array([1]*Ndim)
-sm = [0.1, 1e-2]
+sm = [0.2, 5e-2]
 
-smexp = 0.1
+smexp = 0.2
 
 ymes = ymesishi
 modelfit = modelgp
@@ -197,14 +206,14 @@ llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
                       model=modelfit)
 llold = llchain[0]
 lpold = logpriornp(MCchain[0,:Ndim], bounds=bounds)
-lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
+lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1], scale_scipy=scinvg)
 # lsold = 0
 
 nacc = 0
 naccmultiD = np.zeros((Ndim+1)) 
 
-# talgo = "MHwG"
-talgo = "MHmultiD"
+talgo = "MHwG"
+# talgo = "MHmultiD"
 
 if talgo == "MHwG":
     ## RUN OF Adaptative MC Within Gibbs
@@ -215,7 +224,7 @@ if talgo == "MHwG":
         llprop = loglikenp(ymes, xmes, xprop,
                       np.diag((sp**2)*np.ones(ymes.shape[0])),
                       model=modelfit)
-        lspp = logspnp(sp, sinvg[0], sinvg[1])
+        lspp = logspnp(sp, sinvg[0], sinvg[1], scale_scipy=scinvg)
         ldiff = llprop + lspp - llold - lsold
         if ldiff > np.log(np.random.rand()):
             if i>Nburn: naccmultiD[Ndim] += 1
@@ -266,8 +275,8 @@ if talgo == "MHmultiD":
         llprop = loglikenp(ymes, xmes, xprop,
                 np.diag((sp**2)*np.ones(ymes.shape[0])),
                 model=modelfit)
-        lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
-        lspp = logspnp(sp, sinvg[0], sinvg[1])
+        lpprop = logpriornp(xprop, bounds=bounds)
+        lspp = logspnp(sp, sinvg[0], sinvg[1], scale_scipy=scinvg)
         # lspp = 0
         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
         if ldiff > np.log(np.random.rand()):
@@ -534,10 +543,10 @@ fig.savefig("pythonpost.png", dpi=200)
 # VISUALISATION OF DIAGNOSTIC FOR MCMC CHAINS
 ###############################################################################
 
-diag = False
+diag = True
 
 if diag:
-    l = 0
+    l = 1
     Nc = int(Ntot/4)
 
     burnzone = patches.Rectangle((0, pl), Nburn, ph-pl,
