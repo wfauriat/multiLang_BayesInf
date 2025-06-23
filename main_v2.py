@@ -32,7 +32,7 @@ def ishigami(x,b):
 
 
 Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(200),
-                        [-3, -3, -3, 0, 0], [3, 3, 3, 10, 1])
+                        [-3, -3, -3, 4, 0.01], [3, 3, 3, 9, 0.3])
 DXtrain = Xtrain.max(axis=0) - Xtrain.min(axis=0)
 lowD = DXtrain/20
 highD = DXtrain*5
@@ -48,24 +48,29 @@ XX = np.array([[0,0,0],
                [-1,-1,2],
                [2.7,-2,0],
                [1,1,-2]])
-b3 = np.array([5,0.5])
-
+b3 = np.array([7,0.1])
 
 kernel = RBF([1.0]*5, 
              [(el1, el2) for el1,el2 in zip(lowD, highD)]) + \
     WhiteKernel(noise_level=0.001,
                 noise_level_bounds=(1e-6,np.var(ytrain)*0.05))
 
-gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
+gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=50)
+
+t0 = time.time()
 gp.fit(Xtrain, ytrain)
-
+print(time.time() - t0)
+t1 = time.time()
 ytrue = ishigami(XX,np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0))
-
+print(time.time() - t1)
+t2 = time.time()
 ypred = gp.predict(np.hstack([XX,
                     np.repeat(np.r_[[b3]],XX.shape[0], axis=0)]))
+print(time.time() - t2)
+
 def modelgp(x, b):
     return gp.predict(np.hstack([x,
-                    np.repeat(np.r_[[b]],x.shape[0], axis=0)]))
+                    np.repeat(np.r_[[b]],x.shape[0], axis=0)])).ravel()
 
 fig, ax = plt.subplots()
 ax.plot(XX[:,0], ytrue, 'or')
@@ -74,7 +79,7 @@ axx = ax.twiny()
 axx.plot(ytrue, ypred, '+k')
 axx.plot(ytrue, ytrue, '+-k')
 ax.set_title('Q2emp=' + \
-             str(np.round(1-np.var(ytrue.ravel()-ypred)/np.var(ypred),3)))
+             str(np.round(1-np.var(ytrue-ypred)/np.var(ypred),3)))
 
 b0 = [2, -1, 2, 0]
 nslvl = 0.2
@@ -205,15 +210,19 @@ llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
                       np.diag((MCchain[0,Ndim]**2)*np.ones(ymes.shape[0])),
                       model=modelfit)
 llold = llchain[0]
+t3 = time.time()
 lpold = logpriornp(MCchain[0,:Ndim], bounds=bounds)
+print(time.time() - t3)
+t4 = time.time()
 lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1], scale_scipy=scinvg)
+print(time.time() - t4)
 # lsold = 0
 
 nacc = 0
 naccmultiD = np.zeros((Ndim+1)) 
 
-talgo = "MHwG"
-# talgo = "MHmultiD"
+# talgo = "MHwG"
+talgo = "MHmultiD"
 
 if talgo == "MHwG":
     ## RUN OF Adaptative MC Within Gibbs
@@ -549,9 +558,11 @@ if diag:
     l = 1
     Nc = int(Ntot/4)
 
-    burnzone = patches.Rectangle((0, pl), Nburn, ph-pl,
+    burnzone = patches.Rectangle((0, bounds[l][0]),
+                                  Nburn, bounds[l][1]-bounds[l][0],
                                 alpha=0.2, color='r', linestyle='')
-    okzone = patches.Rectangle((Nburn, pl), NMCMC-Nburn, ph-pl,
+    okzone = patches.Rectangle((Nburn, bounds[l][0]),
+                                NMCMC-Nburn, bounds[l][1]-bounds[l][0],
                                 alpha=0.2, color='g', linestyle='')
 
     kdes = [sst.gaussian_kde(MCf[i*Nc:(i+1)*Nc,l]) for i in range(0,4)]
@@ -562,7 +573,7 @@ if diag:
     ax.add_patch(burnzone)
     ax.add_patch(okzone)
     ax.axhline(y=MAP[l], color='m', linestyle='--', label='MAP')
-    ax.axhline(y=b0[l], color='r', linestyle='-', label='true')
+    # ax.axhline(y=b0[l], color='r', linestyle='-', label='true')
     ax.set_xlabel('Step in chain')
     ax.set_ylabel('parameter value')
     ax.legend()
@@ -571,10 +582,11 @@ if diag:
     ax.hist(MCf[:,l], edgecolor='b', color='b', bins=20, alpha=0.2)
     axx = ax.twinx()
     for i in range(4):
-        axx.plot(np.linspace(pl,ph,200), kdes[i](np.linspace(pl,ph,200)), '-k')
+        axx.plot(np.linspace(bounds[l][0],bounds[l][1],200),
+                  kdes[i](np.linspace(bounds[l][0],bounds[l][1],200)), '-k')
     ax.axvline(x=MAP[l], color='m', linestyle='--', label='MAP')
-    ax.axvline(x=b0[l], color='r', linestyle='-', label='true')
-    ax.set_xlim(pl, ph)
+    # ax.axvline(x=b0[l], color='r', linestyle='-', label='true')
+    # ax.set_xlim(pl, ph)
     ax.legend()
 
 #%%############################################################################
