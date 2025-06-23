@@ -201,7 +201,7 @@ xmes = XX
 MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
 MCchain[0,:Ndim] = bstart
-MCchain[0,Ndim] = sinvg[0] + sinvg[1]
+MCchain[0,Ndim] = sinvg[0]*scinvg + sinvg[1]
 xprop = MCchain[0,:Ndim]
 # MCchain[0,Ndim] = 0.2
 # llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
@@ -221,8 +221,8 @@ print(time.time() - t4)
 nacc = 0
 naccmultiD = np.zeros((Ndim+1)) 
 
-# talgo = "MHwG"
-talgo = "MHmultiD"
+talgo = "MHwG"
+# talgo = "MHmultiD"
 
 if talgo == "MHwG":
     ## RUN OF Adaptative MC Within Gibbs
