@@ -15,6 +15,8 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 import time as time
 # matplotlib.use('QtAgg')
 
+np.random.seed(123)
+
 
 #%%############################################################################
 # DEFINITION OF APPLICATION / CALIBRATION CASE
@@ -31,35 +33,35 @@ def ishigami(x,b):
                b[:,1]*np.sin(x[:,0])*x[:,2]**4] 
 
 
-Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(100),
-                        [-3, -3, -3, 0, 0], [3, 3, 3, 10, 1])
-ytrain = ishigami(Xtrain[:,:3],Xtrain[:,3:])
+# Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(100),
+#                         [-3, -3, -3, 0, 0], [3, 3, 3, 10, 1])
+# ytrain = ishigami(Xtrain[:,:3],Xtrain[:,3:])
 
-XX = np.array([[0,0,0],
-               [-1.3,0,-1],
-               [0.2,1,-1],
-               [2,1,-2],
-               [3.4,1,-1],
-               [2.5,-2,-1],
-               [3,3,-2],
-               [-1,-1,2],
-               [2.7,-2,0],
-               [1,1,-2]])
-b3 = np.array([5,0.5])
+# XX = np.array([[0,0,0],
+#                [-1.3,0,-1],
+#                [0.2,1,-1],
+#                [2,1,-2],
+#                [3.4,1,-1],
+#                [2.5,-2,-1],
+#                [3,3,-2],
+#                [-1,-1,2],
+#                [2.7,-2,0],
+#                [1,1,-2]])
+# b3 = np.array([5,0.5])
 
-kernel = RBF([1.0]*5, [(1e-5, 1e5) for _ in range(5)]) + \
-    WhiteKernel(noise_level=0.001,noise_level_bounds=(1e-5,1e-2))
+# kernel = RBF([1.0]*5, [(1e-5, 1e5) for _ in range(5)]) + \
+#     WhiteKernel(noise_level=0.001,noise_level_bounds=(1e-5,1e-2))
 
-gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
-gp.fit(Xtrain, ytrain)
+# gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
+# gp.fit(Xtrain, ytrain)
 
-ytrue = ishigami(XX,np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0))
+# ytrue = ishigami(XX,np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0))
 
-ypred = gp.predict(np.hstack([XX,
-                    np.repeat(np.r_[[b3]],XX.shape[0], axis=0)]))
-def modelgp(x, b):
-    return gp.predict(np.hstack([x,
-                    np.repeat(np.r_[[b]],x.shape[0], axis=0)]))
+# ypred = gp.predict(np.hstack([XX,
+#                     np.repeat(np.r_[[b3]],XX.shape[0], axis=0)]))
+# def modelgp(x, b):
+#     return gp.predict(np.hstack([x,
+#                     np.repeat(np.r_[[b]],x.shape[0], axis=0)]))
 
 # fig, ax = plt.subplots()
 # ax.plot(XX[:,0], ytrue, 'or')
@@ -77,11 +79,11 @@ xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
 xplot[:,1] = 1
 
 xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
-                 biasp1+nsp1*np.c_[sst.norm(loc=0, scale=1).rvs(10)]])
+                 biasp1+nsp1*np.c_[np.random.randn(10)]])
 ymes = modeltrue(xmes, b0)
-ymes += sst.norm().rvs(xmes.shape[0])*nslvl
+ymes += np.random.randn(xmes.shape[0])*nslvl
 
-ymesishi = ishigami(XX, np.repeat(np.r_[[b3]],XX.shape[0], axis=0)).ravel()
+# ymesishi = ishigami(XX, np.repeat(np.r_[[b3]],XX.shape[0], axis=0)).ravel()
 
 #%%############################################################################
 # DEFINITION OF BAYESIAN INFERENCE OBJECTS
@@ -115,7 +117,7 @@ def loglikenp(obs, var, par, sigma, model):
 
 def logpriornp(par, bounds):
     bcheck = [(p > b[0]) & (p < b[1]) for (p,b) in zip(par, bounds)]
-    return 0 if all(bcheck) else -np.inf
+    return np.sum(1/(bounds[:,1]-bounds[:,0])) if all(bcheck) else -np.inf
 
 def logspnp(x, mu_scipy, loc, scale_scipy=1):
     x_shifted = x - loc
@@ -143,8 +145,8 @@ def covToCorr(Sig):
     Dinv = np.diag(1/np.sqrt(np.diag(covProp)))
     return Dinv @ Sig @ Dinv
 
-loglikenp(ymesishi, XX, b3, np.diag((0.2**2)*np.ones(ymesishi.shape[0])), 
-          modelgp)
+# loglikenp(ymesishi, XX, b3, np.diag((0.2**2)*np.ones(ymesishi.shape[0])), 
+#           modelgp)
 
 #%%############################################################################
 # IMPLEMENTATION OF INFERENCE ALGORITHM
@@ -156,28 +158,27 @@ pl = -3
 ph = 3
 # punif = [sst.uniform(pl,ph-pl) for _ in range(Ndim)]
 # smod = sst.invgauss(0.4,0.2)
-sinvg = [0.4, 0.3]
+sinvg = [0.4, 0.3, 1]
 
-bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
-# bstart = np.array([1.5,-0.7,1.5])
+# bstart = np.array([sst.uniform(pl,ph-pl).rvs() for _ in range(Ndim)])
+bstart = np.array([2.2,-0.7,1.5, 0.5])
 
 ## PARAMETRIZATION OF MCMC
-NMCMC = 25000
-Nburn = 5000
+NMCMC = 20000
+Nburn = 2000
 Nthin = 20
 Ntune = Nburn
 
 covProp = np.eye(3)*1e-1
 LLTprop = np.linalg.cholesky(covProp)
 sm = np.array([0.1, 0.1, 0.1])
-
 smexp = 0.1
 
 ## INITIALISATION OF MCMC
 MCchain = np.zeros((NMCMC, Ndim+1))
 llchain = np.zeros(NMCMC)
-MCchain[0,:Ndim] = bstart
-MCchain[0,Ndim] = sinvg[0] + sinvg[1]
+MCchain[0,:Ndim] = bstart[:Ndim]
+MCchain[0,Ndim] = bstart[Ndim]
 xprop = MCchain[0,:Ndim]
 # MCchain[0,Ndim] = 0.2
 # llchain[0] = loglike(ymes, xmes, MCchain[0,:Ndim], MCchain[0,Ndim],
@@ -187,7 +188,7 @@ llchain[0] = loglikenp(ymes, xmes, MCchain[0,:Ndim],
                       model=modelfit)
 llold = llchain[0]
 lpold = logpriornp(MCchain[0,:Ndim], np.repeat(np.c_[pl, ph],3, axis=0))
-lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1])
+lsold = logspnp(MCchain[0,Ndim], sinvg[0], sinvg[1], scale_scipy=sinvg[2])
 # lsold = 0
 
 nacc = 0
@@ -205,7 +206,7 @@ if talgo == "MHwG":
         llprop = loglikenp(ymes, xmes, xprop,
                       np.diag((sp**2)*np.ones(ymes.shape[0])),
                       model=modelfit)
-        lspp = logspnp(sp, sinvg[0], sinvg[1])
+        lspp = logspnp(sp, sinvg[0], sinvg[1], scale_scipy=sinvg[2])
         ldiff = llprop + lspp - llold - lsold
         if ldiff > np.log(np.random.rand()):
             if i>Nburn: naccmultiD[Ndim] += 1
@@ -257,7 +258,7 @@ if talgo == "MHmultiD":
                 np.diag((sp**2)*np.ones(ymes.shape[0])),
                 model=modelfit)
         lpprop = logpriornp(xprop, np.repeat(np.c_[pl, ph],3, axis=0))
-        lspp = logspnp(sp, sinvg[0], sinvg[1])
+        lspp = logspnp(sp, sinvg[0], sinvg[1], scale_scipy=sinvg[2])
         # lspp = 0
         ldiff = llprop + lpprop + lspp - llold - lpold - lsold
         if ldiff > np.log(np.random.rand()):
@@ -342,8 +343,8 @@ fig.savefig("pythonpostobs.png", dpi=200)
 
 startchain = False
 
-# fig, ax = plt.subplots(4,4, figsize=(8,8))
-fig, ax = plt.subplots(4,4)
+fig, ax = plt.subplots(4,4, figsize=(8,8))
+# fig, ax = plt.subplots(4,4)
 for i in range(4):
     for j in range(4):
         if j>i:

@@ -1,12 +1,13 @@
 #%%
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
-from pyBI.inference import InfAlgo
+from pyBI.inference import InfAlgo, MHalgo
 
 import numpy as np
 import scipy.stats as sst
 
 import matplotlib.pyplot as plt
 
+np.random.seed(123)
 
 #%%
 
@@ -43,49 +44,48 @@ sinvg = [0.4, 0.3, 1]
 sm = [0.4, 0.4, 0.05]
 smexp = 0.1
 
+covProp = np.eye(3)*1e-1
+LLTprop = np.linalg.cholesky(covProp)
+
 rndUs = [UnifVar([pl,ph]) for _ in range(3)]
 rnds = InvGaussVar(param=sinvg)
 obsvar = ObsVar(obs=ymes, prev_model=modelfit, cond_var=xmes)
+
+bstart = np.array([2.2,-0.7,1.5, 0.5])
 
 
 #%%
 
 NMCMC = 20000
 
-MCalgo = InfAlgo(NMCMC, Nthin=20, Nburn=2000)
-MCalgo.initialize(obsvar, rndUs, rnds, svar=sm, sdisc=smexp)
-MCalgo.MCchain[0] = [0, 0, 0] + [smexp]
+MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=2000)
+MCalgo.initialize(obsvar, rndUs, rnds, svar=sm, sdisc=smexp, Lblock=LLTprop)
+MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
+MCalgo.runInference()
 
-# covProp = np.array([[ 0.0710169,  -0.05286373,  0.00801512],
-#                     [-0.05286373,  0.06416962, -0.01164902],
-#                     [ 0.00801512, -0.01164902,  0.00226849]])
-# LLTprop = np.linalg.cholesky(covProp * 2.38**2/(Ndim-1) +
-#                                         np.eye(Ndim)*1e-8)
+print(MCalgo.nacc/(MCalgo.N - MCalgo.Nburn))
 
-covProp = np.eye(3)*1e-1
-LLTprop = np.linalg.cholesky(covProp)
-
-nacc = 0
-
-for i in range(1,MCalgo.N):
-    MCalgo.move_prop(i=i, x0=MCalgo.MCchain[i-1], Lblock=LLTprop)
-    llprop, lpprop = MCalgo.state(i)
-    ldiff = llprop + lpprop - MCalgo.log_state - MCalgo.prior_state
-    if ldiff > np.log(np.random.rand()):
-        if i>MCalgo.Nburn: nacc += 1
-        MCalgo.llchain[i] = llprop
-        MCalgo.log_state = llprop
-        MCalgo.prior_state = lpprop
-    else: MCalgo.stay(i)
-    if (i%1000 == 0) : print(i)
-    if (i%500 == 0) & (i<=MCalgo.Nburn) :
-        covProp = np.cov(MCalgo.MCchain[i-500:i,:MCalgo.Ndim].T) 
-        LLTprop = np.linalg.cholesky(covProp * 2.38**2/(Ndim-1) +
-                                    np.eye(Ndim)*1e-8)
-        MCalgo.Lblock = LLTprop
-
-print(nacc / (NMCMC*0.9))
+# nacc = 0
+# 
+# for i in range(1,MCalgo.N):
+#     MCalgo.move_prop(i=i, x0=MCalgo.MCchain[i-1], Lblock=LLTprop)
+#     llprop, lpprop = MCalgo.state(i)
+#     ldiff = llprop + lpprop - MCalgo.log_state - MCalgo.prior_state
+#     if ldiff > np.log(np.random.rand()):
+#         if i>MCalgo.Nburn: nacc += 1
+#         MCalgo.llchain[i] = llprop
+#         MCalgo.log_state = llprop
+#         MCalgo.prior_state = lpprop
+#     else: MCalgo.stay(i)
+#     if (i%1000 == 0) : print(i)
+#     if (i%500 == 0) & (i<=MCalgo.Nburn) :
+#         covProp = np.cov(MCalgo.MCchain[i-500:i,:MCalgo.Ndim].T) 
+#         LLTprop = np.linalg.cholesky(covProp * 2.38**2/(Ndim-1) +
+#                                     np.eye(Ndim)*1e-8)
+#         MCalgo.Lblock = LLTprop
+# 
+# print(nacc / (NMCMC*0.9))
 
 
 #%%

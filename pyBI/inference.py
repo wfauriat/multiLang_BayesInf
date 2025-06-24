@@ -29,7 +29,7 @@ class InfAlgo():
 
     def state(self, i, set_state=False):
         log_state = self.obsObj.loglike(self.MCchain[i,:self.Ndim], 
-                        self.discrObj.diagSmat(s=self.MCchain[0,self.Ndim],
+                        self.discrObj.diagSmat(s=self.MCchain[i,self.Ndim],
                                        N=self.obsObj.Ndata))
         prior_state = np.sum([self.varObj[k].logprior(self.MCchain[i,k]) 
                               for k in range(len(self.varObj))]) + \
@@ -63,8 +63,31 @@ class InfAlgo():
             return xprop + [sprop]
         
     def stay(self, i):
-        self.MCchain[i] =  self.MCchain[i-1]
+        self.MCchain[i] = self.MCchain[i-1]
         self.llchain[i] = self.llchain[i-1]
 
     
 
+class MHalgo(InfAlgo):
+    def __init__(self, N, Nthin=None, Nburn=0.1):
+        super().__init__(N, Nthin, Nburn)
+
+    def runInference(self):
+        self.nacc = 0 
+        for i in range(1,self.N):
+            self.move_prop(i=i, x0=self.MCchain[i-1], Lblock=self.Lblock)
+            llprop, lpprop = self.state(i)
+            ldiff = llprop + lpprop - self.log_state - self.prior_state
+            if ldiff > np.log(np.random.rand()):
+                if i>self.Nburn: self.nacc += 1
+                self.llchain[i] = llprop
+                self.log_state = llprop
+                self.prior_state = lpprop
+            else: self.stay(i)
+            if (i%1000 == 0) : print(i)
+            if (i%500 == 0) & (i<=self.Nburn) :
+                covProp = np.cov(self.MCchain[i-500:i,:self.Ndim].T) 
+                LLTprop = np.linalg.cholesky(covProp * 2.38**2/(self.Ndim-1) +
+                                            np.eye(self.Ndim)*1e-8)
+                self.Lblock = LLTprop
+        return self.MCchain
