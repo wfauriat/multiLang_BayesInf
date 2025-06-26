@@ -1,6 +1,6 @@
 #%%
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
-from pyBI.inference import MHalgo, MHwGalgo
+from pyBI.inference import MHalgo, MHwGalgo, InfAlgo
 
 import numpy as np
 import scipy.stats as sst

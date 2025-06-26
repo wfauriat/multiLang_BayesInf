@@ -1,30 +1,99 @@
+from warnings import warn
+from typing import Optional
+
 import numpy as np
 from itertools import combinations
-from warnings import warn
+
 from matplotlib.pyplot import subplots
 
 from scipy.stats import gaussian_kde
 
 from .base import rnvmultiD
+from .base import ObsVar, RandVar
 
-class InfAlgo():
-    def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
-                 verbose=True):
-        self.Nburn = int(N*0.1) if Nburn == 0.1 else Nburn
-        self.Nthin = Nthin if Nthin is not None else 1
-        self.N = N + self.Nburn
-        self.log_state = 0
-        self.prior_state = 0
-        self.is_adaptive = is_adaptive
-        self.verbose = verbose
+class InfAlgo:
+    """
+    Generic inference algorithm object
+    """
+    def __init__(self, N: int, Nthin: int = 1, Nburn: int = 0.1,
+                 is_adaptive: bool = True, verbose: bool = True) -> None:
+        """
+        Instanciation of an MCMC-based inference algorithm
 
-    def initialize(self, obsObj, varObj, discrObj, svar=1, sdisc=None,
-                    Lblock=None):
+        Parameters to be defined whith first instanciation
+        ----------
+        N : int 
+            Size of the generated sample
+        Nthin : int (default 1)
+            Number of steps between the sample that are eventually kept
+        is_adaptive : bool (default True)
+            Enables adpatative tuning of proposal (uni or multi-directional)
+        verbose : bool (default True)
+            Display additionnal information during inference and at the
+            end of the inference
+
+        """
+        self.Nburn: int = int(N*0.1) if Nburn == 0.1 else Nburn
+        self.Nthin: int = Nthin
+        self.N: int = N + self.Nburn
+        self.log_state: float = 0.
+        self.prior_state: float = 0.
+        self.is_adaptive: bool = is_adaptive
+        self.verbose: bool = verbose
+        self.ran_chain: bool = False
+
+    def __str__(self):
+        strout = ""
+        strout += str(type(self)) + '\n'
+        strout += 'Number of generated points : '  + \
+              str(self.N - self.Nburn) + '\n'
+        strout += 'Thinning : '  + str(self.Nthin) + '\n'
+        strout += 'Number of retained points : '  + \
+              str(int((self.N - self.Nburn)/self.Nthin)) + '\n'
+        if self.ran_chain:
+            strout += 'acceptation rate : ' + str(self.tacc) + '\n'
+            strout += 'MAP : ' + ", ".join(["{:.3f}".format(el) 
+                                            for el in self.MAP]) + '\n'
+            return strout
+        else: return strout
+
+    # def __doc__():
+    #     return "see __init__()"
+
+    def initialize(self, obsObj: ObsVar, varObj: RandVar, discrObj: RandVar,
+                    svar: float = 1., sdisc: Optional[float] = None,
+                    Lblock: Optional[np.ndarray] = None):
+        """
+        Definition of the necessary objects to instantiate the inference 
+        problem (prior and likelihood functions)
+        Parameters for the proposal can also be defined (default value
+        are generally overidden when adaptive tuning is enabled) 
+
+        Parameters
+        ----------
+        obsObj : ObsVar object
+            Must be defined to give access to likelihood and observed data
+        varObj : RandVar object (UnifVar or InvGaussVar)
+            Must be defined as prior statistical model to be identified
+            through inference
+        discrObj : RandVar object (UnifVar or InvGaussVar)
+            Prior statistical model for discrepence to be identified through
+            inference
+        svar : 
+            Unidirection range for proposal (to be defined in association to
+                                             varObj)
+        sdisc : 
+            Range for proposal for discrepence (to be defined in association to
+                                             discrObj)
+        Lblock : 
+            Proposal LLT transform of covariance matrix for gaussian
+            multidimensional proposal
+
+        """
         self.Ndim = len(varObj)
         self.varObj = varObj
         self.discrObj = discrObj
         self.obsObj = obsObj
-        self.ran_chain = False
         self.MCchain = np.zeros((self.N, self.Ndim+1))
         self.llchain = np.zeros(self.N)
         self.svar = svar*np.ones(self.Ndim) if isinstance(svar,(int,float)) \
@@ -42,6 +111,11 @@ class InfAlgo():
         self.state(0, set_state=True)
 
     def state(self, i, set_state=False):
+        """
+        Evaluation of current step:
+        Computation of log-likelihood given current state
+        Computation of log-prior of current state
+        """
         log_state = self.obsObj.loglike(self.MCchain[i,:self.Ndim], 
                         self.discrObj.diagSmat(s=self.MCchain[i,self.Ndim],
                                        N=self.obsObj.Ndata))
@@ -55,6 +129,9 @@ class InfAlgo():
         else: return log_state, prior_state
     
     def move_prop(self, x0=None, i=0, Lblock=None):
+        """
+        Proposal of a new state value given current state
+        """
         if Lblock is not None: Ltmp = Lblock # rather for testing purposes
         else: Ltmp = self.Lblock# default behaviour
         if x0 is not None: # default behaviour
@@ -67,6 +144,9 @@ class InfAlgo():
         return xprop + [sprop]
     
     def move_uni(self, di, x0):
+        """
+        Proposal of a new state value in a given direction (given current state)
+        """
         xprop = list(x0[:self.Ndim])
         sprop = x0[self.Ndim]
         if di < self.Ndim:
@@ -75,10 +155,17 @@ class InfAlgo():
         return xprop + [sprop]
     
     def store(self, i, xprop, sprop):
+        """
+        Store current proposal in the MCchain
+        """
         self.MCchain[i,:self.Ndim] = xprop
         self.MCchain[i,self.Ndim] = sprop
         
     def stay(self, i, j=None):
+        """
+        Discard new proposed state (unidirection or multidirectional)
+        and come back to previous (or current) state
+        """
         if j is None:
             self.MCchain[i] = self.MCchain[i-1]
             self.llchain[i] = self.llchain[i-1]
@@ -87,6 +174,9 @@ class InfAlgo():
             self.llchain[i] = self.log_state
 
     def thin_and_sort(self):
+        """
+        Post process result of carried out inference
+        """
         if not self.ran_chain: 
             self.ran_chain = True
             self.raw_chain = self.MCchain
@@ -100,7 +190,10 @@ class InfAlgo():
             warn("Already ran and sorted")
             return self.idx_chain, self.cut_llchain[self.sorted_indices]
         
-    def post_obs(self, model=None):
+    def post_obs(self, model=None) -> np.ndarray:
+        """
+        Propagate posterior through the prevision model
+        """
         Mtmp = model if model is not None else self.obsObj.prev_model
         postY = np.zeros((int((self.N - self.Nburn)/self.Nthin),
                           self.obsObj.Ndata))
@@ -111,6 +204,9 @@ class InfAlgo():
         return postY
     
     def post_visuobs(self, di=0):
+        """
+        Visualize (or propagate) posterior in the observational space
+        """
         fig, ax = subplots()
         postY = self.post_obs()
         ax.plot(self.obsObj.cond_var[:,di], postY.T, '.k')
@@ -118,6 +214,9 @@ class InfAlgo():
         return fig, ax
     
     def post_visupar(self):
+        """
+        Visualize posterior in the parameter space
+        """
         MC = self.idx_chain
         LL = self.cut_llchain[self.sorted_indices]
         quadrans = list(combinations(
@@ -141,6 +240,10 @@ class InfAlgo():
         return fig, ax
     
     def diag_chain(self, di=0, show_prior=True, axf=None):
+        """
+        Visualize the diagnostic associated to a given dimension of the 
+        sampled chain
+        """
         MC = self.cut_chain
         Nc = int(self.cut_chain.shape[0]/4)
         labels = ['v' + str(i) for i in range(self.Ndim)] + ['d']
@@ -181,19 +284,11 @@ class InfAlgo():
             self.diag_chain(di=i, axf=ax[i])
         fig.tight_layout()
 
-    def __str__(self):
-        strout = ""
-        strout += str(type(self)) + '\n'
-        strout += 'Number of points : '  + str(self.N - self.Nburn) + '\n'
-        if self.ran_chain:
-            strout += 'acceptation rate : ' + str(self.tacc) + '\n'
-            strout += 'MAP : ' + ", ".join(["{:.3f}".format(el) 
-                                            for el in self.MAP]) + '\n'
-            return strout
-        else: return strout
-
 
 class MHalgo(InfAlgo):
+    """
+    Subclass for instanciating a standard Metropolis Hasting inference 
+    """
     def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
                  verbose=True):
         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
@@ -224,6 +319,9 @@ class MHalgo(InfAlgo):
     
 
 class MHwGalgo(InfAlgo):
+    """
+    Subclass for instanciating a Metropolis within Gibbs inference
+    """
     def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
                  verbose=False):
         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
