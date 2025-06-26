@@ -18,7 +18,7 @@ class InfAlgo():
         self.is_adaptive = is_adaptive
         self.verbose = verbose
 
-    def initialize(self, obsObj, varObj, discrObj, svar=1, sdisc=1,
+    def initialize(self, obsObj, varObj, discrObj, svar=1, sdisc=None,
                     Lblock=None):
         self.Ndim = len(varObj)
         self.varObj = varObj
@@ -29,7 +29,8 @@ class InfAlgo():
         self.llchain = np.zeros(self.N)
         self.svar = svar*np.ones(self.Ndim) if isinstance(svar,(int,float)) \
             else svar
-        self.sdisc = sdisc
+        if sdisc is not None: self.sdisc = sdisc
+        else: self.sdisc = discrObj.param[0]*discrObj.param[2]*0.5
         if isinstance(Lblock,(int,float)):
             self.Lblock = np.eye(self.Ndim)
         elif Lblock is None:
@@ -139,22 +140,58 @@ class InfAlgo():
         fig.tight_layout()
         return fig, ax
     
-    def diag_chain(self, di=0):
+    def diag_chain(self, di=0, show_prior=True, axf=None):
         MC = self.cut_chain
         Nc = int(self.cut_chain.shape[0]/4)
-        kdes = [gaussian_kde(MC[i*Nc:(i+1)*Nc,di]) for i in range(0,4)]
-        fig, ax = subplots(2,1)
-        ax[0].plot(self.raw_chain[:,di], '-k', lw=0.5)
-        ax[1].hist(self.idx_chain[:,di], edgecolor='k', alpha=0.6)
-        axx = ax[1].twinx()
+        labels = ['v' + str(i) for i in range(self.Ndim)] + ['d']
         xi = np.linspace(MC[:,di].min(), MC[:,di].max())
+        kdes = [gaussian_kde(MC[i*Nc:(i+1)*Nc,di]) for i in range(0,4)]
+        if axf is None:
+            fig, ax = subplots(2,1)
+            ax[0].plot(self.raw_chain[:(1*Nc*self.Nthin + self.Nburn),di],
+                                    '-k', lw=0.5)
+            ax[1].hist(self.idx_chain[:,di], edgecolor='b', alpha=0.4)
+            axx = ax[1].twinx()
+            ax[1].set_xlabel(labels[di])
+        else: 
+            axf.hist(self.idx_chain[:,di], edgecolor='b', alpha=0.4)
+            axf.set_xlabel(labels[di])
+            axx = axf.twinx()
         for i in range(4):
             axx.plot(xi, kdes[i].pdf(xi), 'k')
-        return fig, ax
-
-
-
+        if show_prior:
+            if di < self.Ndim:
+                for i in range(4):
+                    xp = np.linspace(
+                        self.varObj[di].min,self.varObj[di].max, 100)
+                    axx.plot(xp, np.exp([self.varObj[di].logprior(x) 
+                                        for x in xp]), 'r')
+            else:
+                for i in range(4):
+                    xp = np.linspace(
+                        self.discrObj.min,self.discrObj.max, 100)
+                    axx.plot(xp, np.exp([self.discrObj.logprior(x) 
+                                        for x in xp]), 'r')
+        if axf is None: return fig, ax
+        else: return axf
     
+    def hist_alldim(self, figsize=(10,4)):
+        fig, ax = subplots(1,self.Ndim+1, figsize=figsize)
+        for i in range(self.Ndim+1):
+            self.diag_chain(di=i, axf=ax[i])
+        fig.tight_layout()
+
+    def __str__(self):
+        strout = ""
+        strout += str(type(self)) + '\n'
+        strout += 'Number of points : '  + str(self.N - self.Nburn) + '\n'
+        if self.ran_chain:
+            strout += 'acceptation rate : ' + str(self.tacc) + '\n'
+            strout += 'MAP : ' + ", ".join(["{:.3f}".format(el) 
+                                            for el in self.MAP]) + '\n'
+            return strout
+        else: return strout
+
 
 class MHalgo(InfAlgo):
     def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
@@ -211,7 +248,8 @@ class MHwGalgo(InfAlgo):
             if (i%500 == 0) & (i<=self.Nburn) & (self.is_adaptive):
                 for idx in id_rnd:
                     if idx != self.Ndim:
-                        self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*1 
+                        self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*1
+                self.Lblock = np.diag(self.svar) 
         MCS = self.thin_and_sort()
         self.tacc = self.nacc/(self.N - self.Nburn)
         if self.verbose: print('acceptation rate', self.tacc)

@@ -8,10 +8,10 @@ import scipy.stats as sst
 import matplotlib.pyplot as plt
 
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 
-np.random.seed(123)
+# np.random.seed(123)
 
 #%%
 
@@ -21,7 +21,9 @@ case = 0
 inftype = 'MH'
 # inftype = 'MHwG'
 
-#%%
+#%%############################################################################
+# DEFINITION OF APPLICATION / CALIBRATION CASE
+###############################################################################
 
 if case == 0:
     def modeltrue(x,b):
@@ -50,30 +52,23 @@ if case == 1:
 
     Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(100),
                             [-3, -3, -3, 4, 0.01], [3, 3, 3, 9, 0.3])
-    DXtrain = Xtrain.max(axis=0) - Xtrain.min(axis=0)
-    lowD = DXtrain/20
-    highD = DXtrain*5
     ytrain = ishigami(Xtrain[:,:3],Xtrain[:,3:])
 
-    XX = np.array([[0,0,0],
-                [-1.3,0,-1],
-                [0.2,1,-1],
-                [2,1,-2],
-                [3.4,1,-1],
-                [2.5,-2,-1],
-                [3,3,-2],
-                [-1,-1,2],
-                [2.7,-2,0],
+    XX = np.array([[0,0,0], [-1.3,0,-1], [0.2,1,-1],
+                [2,1,-2], [3.4,1,-1], [2.5,-2,-1],
+                [3,3,-2], [-1,-1,2], [2.7,-2,0],
                 [1,1,-2]])
     b3 = np.array([7,0.1])
 
+    DXtrain = Xtrain.max(axis=0) - Xtrain.min(axis=0)
+    lowD = DXtrain/20
+    highD = DXtrain*5
     kernel = RBF([1.0]*5, 
                 [(el1, el2) for el1,el2 in zip(lowD, highD)]) + \
         WhiteKernel(noise_level=0.001,
                     noise_level_bounds=(1e-6,np.var(ytrain)*0.05))
 
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
-
     gp.fit(Xtrain, ytrain)
 
     def modelgp(x, b):
@@ -84,6 +79,7 @@ if case == 1:
                 np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0)).ravel()
     ypred = modelgp(XX, b3)
     Q2emp = 1-np.var(ytrue-ypred)/np.var(ypred)
+    ymes = ytrue
             
     if True:
         fig, ax = plt.subplots()
@@ -94,16 +90,19 @@ if case == 1:
         axx.plot(ytrue, ytrue, '+-k')
         ax.set_title('Q2emp=' + \
                     str(np.round(Q2emp,3)))
+    print('Q2emp =', Q2emp)
+    
 
-    ymes = ishigami(XX, np.repeat(np.r_[[b3]],XX.shape[0], axis=0)).ravel()
+#%%############################################################################
+# DEFINITION OF BAYESIAN INFERENCE OBJECTS
+###############################################################################
 
-#%%
-
+############## FULLY ANALYTICAL REGRESSION EXAMPLE
 if case == 0:
     Ndim = 3
     pl = -3
     ph = 3
-    sinvg = [0.4, 0.3, 1]
+    sinvg = [0.2, -0.1, 2]
 
     sm = [0.4, 0.4, 0.05]
     smexp = 0.1
@@ -114,11 +113,13 @@ if case == 0:
     rnds = InvGaussVar(param=sinvg)
     obsvar = ObsVar(obs=ymes, prev_model=modelfit, cond_var=xmes)
 
-    bstart = np.array([2.2,-0.7,1.5, 0.5])
-
+    bstart = np.array([rndUs[i].draw() for i in range(3)] + \
+                       [float(rnds.draw())])
+    
+############## ISHIGAMI AND GP MODEL SURROGATE FOR CALIBRATION
 if case == 1:
     Ndim = 2
-    sinvg = [0.4, 0.3, 1]
+    sinvg = [0.4, 0, 2]
 
     sm = [0.2, 5e-2]
     smexp = 0.2
@@ -129,26 +130,37 @@ if case == 1:
     rnds = InvGaussVar(param=sinvg)
     obsvar = ObsVar(obs=ymes, prev_model=modelgp, cond_var=XX)
 
-    bstart = [2, 0., 0.5]
+    bstart = np.array([rndUs[i].draw() for i in range(2)] + \
+                       [float(rnds.draw())])
 
 
-#%%
+#%%############################################################################
+# INSTANTIATION AND RUN OF INFERENCE ALGORITHM
+###############################################################################
 
 NMCMC = 20000
+Nburn = 5000
+verbose = True
 
 if inftype == 'MH':
-    MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=5000, is_adaptive=True,
-                     verbose=True)
+    MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+                     verbose=verbose)
 if inftype == 'MHwG':
-    MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=5000, is_adaptive=True,
-                       verbose=True)
-MCalgo.initialize(obsvar, rndUs, rnds, svar=sm, sdisc=smexp)
+    MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+                       verbose=verbose)
+# MCalgo.initialize(obsvar, rndUs, rnds, svar=sm, sdisc=smexp)
+MCalgo.initialize(obsvar, rndUs, rnds)
 MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()
 
+
+#%%############################################################################
+# VISUALISATION OF INFERENCE RESULTS
+###############################################################################
+
+MCalgo.post_visupar()
+MCalgo.hist_alldim()
+
 #%%
-
-fig0, ax0 = MCalgo.post_visupar()
-fig1, ax1 = MCalgo.diag_chain(2)
-
+print(MCalgo)

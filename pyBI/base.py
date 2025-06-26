@@ -22,6 +22,8 @@ def rnvmultiD(m, Lmat):
 class UnifVar(RandVar):
     def __init__(self, param=None):
         super().__init__(param)
+        self.min = self.param[0]
+        self.max = self.param[1]
 
     def logprior(self, x):
         bcheck = (x > self.param[0]) & (x < self.param[1])
@@ -38,6 +40,8 @@ class UnifVar(RandVar):
 class InvGaussVar(RandVar):
     def __init__(self, param=None):
         super().__init__(param)
+        self.min = 0
+        self.max = (self.param[0]*self.param[2] + self.param[1])*4
     
     def logprior(self, x, loc=None, scale=None):
         mu = self.param[0]
