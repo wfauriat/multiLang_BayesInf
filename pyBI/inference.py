@@ -196,7 +196,7 @@ class InfAlgo:
         """
         Mtmp = model if model is not None else self.obsObj.prev_model
         postY = np.zeros((int((self.N - self.Nburn)/self.Nthin),
-                          self.obsObj.Ndata))
+                          self.obsObj.dimdata))
         for i in range(postY.shape[0]):
             postY[i,:] = Mtmp(self.obsObj.cond_var,
                              self.idx_chain[i,:self.Ndim]) + \
@@ -210,7 +210,7 @@ class InfAlgo:
         fig, ax = subplots()
         postY = self.post_obs()
         ax.plot(self.obsObj.cond_var[:,di], postY.T, '.k')
-        ax.plot(self.obsObj.cond_var[:,di], self.obsObj.obs, 'or')
+        ax.plot(self.obsObj.cond_var[:,di], self.obsObj.obs[0,:], 'or')
         return fig, ax
     
     def post_visupar(self):

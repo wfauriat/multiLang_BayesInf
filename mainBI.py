@@ -95,7 +95,7 @@ if case == 1:
     print('Q2emp =', Q2emp)
 
 if case == 2:
-    Nsamp = 30
+    Nsamp = 50
     mu_true = np.array([1,2,4])
     cor_true = np.array([[1,     0.8,  -0.1],
                          [0.8,     1,  -0.5],
@@ -200,5 +200,12 @@ if case == 2:
     print(sst.multivariate_normal(
         MCalgo.MAP[:3], rnds.diagSmat(MCalgo.MAP[3], 3)).logpdf(yrnd).sum())
     print(obsvar.loglike(MCalgo.MAP[:3],rnds.diagSmat(MCalgo.MAP[3], 3)))
+    ypost = sst.multivariate_normal(mean=MCalgo.MAP[:3],
+                                    cov=MCalgo.discrObj.diagSmat(
+                                        MCalgo.MAP[3], yrnd.shape[1])).rvs(100)
+
+    fig, ax = plt.subplots()
+    ax.scatter(ypost[:,0], ypost[:,1], marker='x', color='k')
+    ax.scatter(yrnd[:,0], yrnd[:,1], marker='o', color='b')
 
 
