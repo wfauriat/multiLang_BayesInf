@@ -18,6 +18,10 @@ def rnvmultiD(m, Lmat):
     # Lmat = np.linalg.cholesky(Cov)
     return m + np.ravel(Lmat @ np.random.randn(m.shape[0],1))
 
+def covToCorr(Sig):
+    Dinv = np.diag(1/np.sqrt(np.diag(Sig)))
+    return Dinv @ Sig @ Dinv
+
 
 class UnifVar(RandVar):
     def __init__(self, param=None):
@@ -76,21 +80,43 @@ class ObsVar():
     def __init__(self, obs, prev_model, cond_var=None):
         self.obs = obs
         self.Ndata = obs.shape[0]
+        self.dimdata = obs.shape[1]
         if cond_var is not None: self.cond_var = cond_var
         self.prev_model = prev_model
 
     def loglike(self, par, sigma):
-        obs = self.obs.reshape(-1,1)
+        N = self.obs.shape[0]
+        d = self.obs.shape[1]
         try:
             L = np.linalg.cholesky(sigma)
         except np.linalg.LinAlgError:
             raise ValueError("Covariance matrix is not positive semi-definite "+
                              "(cannot perform Cholesky decomposition).")
         log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
-        diff = self.prev_model(self.cond_var,par).reshape(-1,1) - obs
-        y = np.linalg.solve(L, diff)
-        mahalanobis_term = np.sum(y**2)
-        log_likelihood = -0.5 * sigma.shape[0] * np.log(2*np.pi) + \
-                        -0.5 * log_det_sigma + \
-                        - 0.5 * mahalanobis_term
+        diff = self.prev_model(self.cond_var,par) - self.obs
+        mahalanobis_term = np.zeros(N)
+        for i in range(N):
+            y = np.linalg.solve(L, diff[i, :])
+            mahalanobis_term[i] = np.sum(y**2)
+        log_likelihood = - (N * d / 2) * np.log(2 * np.pi) \
+                    - (N / 2) * log_det_sigma \
+                    - (1 / 2) * np.sum(mahalanobis_term)
         return log_likelihood
+
+
+    # def loglike(self, par, sigma):
+    #     obs = self.obs.reshape(-1,1)
+    #     try:
+    #         L = np.linalg.cholesky(sigma)
+    #     except np.linalg.LinAlgError:
+    #         raise ValueError("Covariance matrix is not positive semi-definite "+
+    #                          "(cannot perform Cholesky decomposition).")
+    #     log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
+    #     diff = self.prev_model(self.cond_var,par).reshape(-1,1) - obs
+    #     y = np.linalg.solve(L, diff)
+    #     mahalanobis_term = np.sum(y**2)
+    #     log_likelihood = -0.5 * sigma.shape[0] * np.log(2*np.pi) + \
+    #                     -0.5 * log_det_sigma + \
+    #                     - 0.5 * mahalanobis_term
+    #     return log_likelihood
+    

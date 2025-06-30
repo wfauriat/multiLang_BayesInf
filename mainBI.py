@@ -12,11 +12,13 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 
 # np.random.seed(123)
+## REFAIRE LOG-LIKELIHOOD en distinguant MEAN(paramsA) et COV(paramsB)
 
 #%%
 
-case = 0
+# case = 0
 # case = 1
+case = 2
 
 inftype = 'MH'
 # inftype = 'MHwG'
@@ -27,10 +29,10 @@ inftype = 'MH'
 
 if case == 0:
     def modeltrue(x,b):
-        return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 1*x[:,1]
+        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 1*x[:,1])
 
     def modelfit(x,b):
-        return b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2
+        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
 
     b0 = [2, -1, 2, 0]
     nslvl = 0.2
@@ -47,8 +49,8 @@ if case == 0:
 
 if case == 1:
     def ishigami(x,b):
-        return np.c_[np.sin(x[:,0]) + b[:,0]*np.sin(x[:,1])**2 +  \
-               b[:,1]*np.sin(x[:,0])*x[:,2]**4] 
+        return np.atleast_2d(np.sin(x[:,0]) + b[:,0]*np.sin(x[:,1])**2 +  \
+               b[:,1]*np.sin(x[:,0])*x[:,2]**4)
 
     Xtrain = sst.qmc.scale(sst.qmc.LatinHypercube(d=5).random(100),
                             [-3, -3, -3, 4, 0.01], [3, 3, 3, 9, 0.3])
@@ -69,28 +71,43 @@ if case == 1:
                     noise_level_bounds=(1e-6,np.var(ytrain)*0.05))
 
     gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
-    gp.fit(Xtrain, ytrain)
+    gp.fit(Xtrain, ytrain.ravel())
 
     def modelgp(x, b):
-        return gp.predict(np.hstack([x,
-                    np.repeat(np.r_[[b]],x.shape[0], axis=0)])).ravel()
+        return np.atleast_2d(gp.predict(np.hstack([x,
+                    np.repeat(np.r_[[b]],x.shape[0], axis=0)])).ravel())
 
     ytrue = ishigami(XX,
-                np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0)).ravel()
+                np.repeat(np.atleast_2d(b3),XX.shape[0], axis=0))
     ypred = modelgp(XX, b3)
     Q2emp = 1-np.var(ytrue-ypred)/np.var(ypred)
     ymes = ytrue
-            
+           
     if True:
         fig, ax = plt.subplots()
-        ax.plot(XX[:,0], ytrue, 'or')
-        ax.plot(XX[:,0], ypred, '.b')
+        ax.plot(XX[:,0], ytrue[0,:], 'or')
+        ax.plot(XX[:,0], ypred[0,:], '.b')
         axx = ax.twiny()
-        axx.plot(ytrue, ypred, '+k')
-        axx.plot(ytrue, ytrue, '+-k')
+        axx.plot(ytrue[0,:], ypred[0,:], '+k')
+        axx.plot(ytrue[0,:], ytrue[0,:], '+-k')
         ax.set_title('Q2emp=' + \
                     str(np.round(Q2emp,3)))
     print('Q2emp =', Q2emp)
+
+if case == 2:
+    Nsamp = 30
+    mu_true = np.array([1,2,4])
+    cor_true = np.array([[1,     0.8,  -0.1],
+                         [0.8,     1,  -0.5],
+                         [-0.5, -0.1,    1]])
+    s_true = np.array([0.2, 0.4, 0.5])
+    cov_true = np.diag(s_true) @ cor_true @ np.diag(s_true)
+    L_true = np.linalg.cholesky(cov_true)
+
+    yrnd = mu_true + (L_true @ np.random.randn(mu_true.shape[0],Nsamp)).T
+
+    def idfun(cond, par, N):
+        return np.repeat(np.atleast_2d(par),N, axis=0)
     
 
 #%%############################################################################
@@ -132,7 +149,18 @@ if case == 1:
 
     bstart = np.array([rndUs[i].draw() for i in range(2)] + \
                        [float(rnds.draw())])
-
+    
+############## STANDARD MULTIVARIATE PARAMETER ESTIMATION
+if case == 2:
+    Ndim = 3
+    sinvg = [0.2, 0.2, 1]
+    rndUs = [UnifVar([0,6]), UnifVar([0,6]), UnifVar([0,6])]
+    rnds = InvGaussVar(param=sinvg)
+    bstart = np.array([rndUs[i].draw() for i in range(3)] + \
+                       [float(rnds.draw())])
+    obsvar = ObsVar(obs=yrnd,
+                prev_model=lambda v, x: idfun(v, x, yrnd.shape[0]),
+                cond_var=[])
 
 #%%############################################################################
 # INSTANTIATION AND RUN OF INFERENCE ALGORITHM
@@ -164,3 +192,13 @@ MCalgo.hist_alldim()
 
 #%%
 print(MCalgo)
+
+
+#%%
+
+if case == 2:
+    print(sst.multivariate_normal(
+        MCalgo.MAP[:3], rnds.diagSmat(MCalgo.MAP[3], 3)).logpdf(yrnd).sum())
+    print(obsvar.loglike(MCalgo.MAP[:3],rnds.diagSmat(MCalgo.MAP[3], 3)))
+
+

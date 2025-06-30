@@ -153,7 +153,7 @@ def rnvmultiD(m,Lmat):
     return m + np.ravel(Lmat @ np.random.randn(m.shape[0],1))
 
 def covToCorr(Sig):
-    Dinv = np.diag(1/np.sqrt(np.diag(covProp)))
+    Dinv = np.diag(1/np.sqrt(np.diag(Sig)))
     return Dinv @ Sig @ Dinv
 
 loglikenp(ymesishi, XX, b3, np.diag((0.2**2)*np.ones(ymesishi.shape[0])), 

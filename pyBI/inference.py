@@ -118,7 +118,7 @@ class InfAlgo:
         """
         log_state = self.obsObj.loglike(self.MCchain[i,:self.Ndim], 
                         self.discrObj.diagSmat(s=self.MCchain[i,self.Ndim],
-                                       N=self.obsObj.Ndata))
+                                       N=self.obsObj.dimdata))
         prior_state = np.sum([self.varObj[k].logprior(self.MCchain[i,k]) 
                               for k in range(len(self.varObj))]) + \
                               self.discrObj.logprior(self.MCchain[i,self.Ndim])
