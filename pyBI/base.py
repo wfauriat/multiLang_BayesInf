@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import minimize
 
 class RandVar():
     def __init__(self, param=None):
@@ -104,19 +105,143 @@ class ObsVar():
         return log_likelihood
 
 
-    # def loglike(self, par, sigma):
-    #     obs = self.obs.reshape(-1,1)
-    #     try:
-    #         L = np.linalg.cholesky(sigma)
-    #     except np.linalg.LinAlgError:
-    #         raise ValueError("Covariance matrix is not positive semi-definite "+
-    #                          "(cannot perform Cholesky decomposition).")
-    #     log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
-    #     diff = self.prev_model(self.cond_var,par).reshape(-1,1) - obs
-    #     y = np.linalg.solve(L, diff)
-    #     mahalanobis_term = np.sum(y**2)
-    #     log_likelihood = -0.5 * sigma.shape[0] * np.log(2*np.pi) + \
-    #                     -0.5 * log_det_sigma + \
-    #                     - 0.5 * mahalanobis_term
-    #     return log_likelihood
+
+
+class HGP():
+    def __init__(self, XX, y, kpar=None, spar=None):
+        self.XX = XX
+        self.dim = XX.shape[1]
+        self.y = y
+        self.bounds = [[1e-5, 1e5]] + self.default_tbounds()[0] + \
+                        [[1e-8, np.var(self.y)*0.01]]
+        if kpar is None: 
+            self.kpar = np.exp(self.rng_par('log')[:self.dim+1])
+        else: self.kpar = kpar
+        if spar is None: 
+            self.spar = np.exp(self.rng_par('log')[self.dim+1])
+        else: self.spar = spar
+        self.cond()
+
+    def cond(self):
+        self.k_XX = self.KaXX(self.XX, self.kpar[1:],
+                               [self.kpar[0], self.spar]) + \
+              np.eye(self.XX.shape[0])*1e-8
+        self.L_XX = np.linalg.cholesky(self.k_XX)
+        self.alpha = np.linalg.solve(self.L_XX.T,
+                                      np.linalg.solve(self.L_XX, self.y))
+
+    def setpar(self, kpar, spar, cond=True):
+        self.kpar = kpar
+        self.spar = spar
+        if cond: 
+            self.k_XX = self.KaXX(self.XX, theta=kpar[1:],
+                                  sigma=[kpar[0], spar]) + \
+                 np.eye(self.XX.shape[0])*1e-8
+            self.L_XX = np.linalg.cholesky(self.k_XX)
+            self.alpha = np.linalg.solve(self.L_XX.T,
+                                      np.linalg.solve(self.L_XX, self.y))
+            # self.cond()
     
+    def raXX(self, X, Y, scl=None):
+        if scl is None: scl = self.kpar[1:]
+        diff = X[:, np.newaxis, :] - Y[np.newaxis, :, :]
+        scaled_diff_sq = (diff / scl)**2
+        squared_weighted_distance = np.sum(scaled_diff_sq, axis=2)
+        return squared_weighted_distance 
+
+    def KaXX(self, X, theta=None, sigma=None):
+        if theta is None: theta = self.kpar[:1]
+        if sigma is None: sigma = [self.kpar[0], self.spar]
+        return sigma[0]**2 * np.exp(-self.raXX(X,X,theta)/2) + \
+            np.eye(X.shape[0])*sigma[1]
+    
+    def KaxX(self, x, X, theta=None, sigma=None):
+        if theta is None: theta = self.kpar[:1]
+        if sigma is None: sigma = [self.kpar[0], self.spar]
+        return sigma[0]**2 * np.exp(-self.raXX(x,X, theta)/2)
+    
+    def m_predict(self, x):
+        K_xX = self.KaxX(x, self.XX, self.kpar[1:], [self.kpar[0], self.spar])
+        mu_pred = K_xX @ self.alpha
+        return mu_pred
+    
+    def cov_predict(self, x, noise=True):
+        K_xX = self.KaxX(x, self.XX, self.kpar[1:], [self.kpar[0], self.spar])
+        v = np.linalg.solve(self.L_XX, K_xX.T)
+        cov_pred = self.KaxX(x, x, self.kpar[1:],
+                              [self.kpar[0], self.spar]) - v.T @ v
+        if noise: cov_pred += np.eye(cov_pred.shape[0])*self.spar
+        return np.maximum(0,cov_pred)
+    
+    def loglike(self, logpar=None):
+        if logpar is None: params = np.log(np.hstack([self.kpar, self.spar]))
+        else: params = logpar
+        d = self.XX.shape[1]
+        N = self.XX.shape[0]
+        s = np.exp(params[0])
+        t = np.exp(params[1:1+d])
+        sn = np.exp(params[1+d])
+        K_XX = self.KaXX(self.XX, t, [s, sn])
+        L = np.linalg.cholesky(K_XX)
+        log_det_K_noisy = 2 * np.sum(np.log(np.diag(L)))
+        alpha = np.linalg.solve(L.T,np.linalg.solve(L, self.y))
+        data_fit_term = self.y.T @ alpha
+        log_marginal_likelihood = -0.5 * data_fit_term - \
+                        0.5 * log_det_K_noisy - \
+                        0.5 * N * np.log(2 * np.pi)
+        return -log_marginal_likelihood
+    
+    def default_tbounds(self, default=[0.05, 5]):
+        xmin = np.min(self.XX, axis=0)
+        xmax = np.max(self.XX, axis=0)
+        xL = xmax - xmin
+        bounds = [[default[0]*L, default[1]*L] for L in xL]
+        return bounds, xL
+    
+    
+    def rng_par(self, dtype='log'):
+        if dtype == 'log':
+            bounds = np.log(np.array(self.bounds))
+        elif dtype == 'lin': bounds = np.array(self.bounds)
+        return np.random.rand() * (bounds[:,1] - \
+                                   bounds[:,0]) + \
+                                   bounds[:,0]   
+    
+    def default_tune(self, x0=None, update=False, verbose=True):
+        x0 = self.rng_par() if x0 is None else x0
+        result = minimize(
+        fun=self.loglike,
+        x0=x0,
+        method='L-BFGS-B',
+        bounds=np.log(self.bounds),
+        # options={'disp': True, 'maxiter': 1000}
+        )
+        sol = np.exp(result.x)
+        ll = result.fun
+        if verbose: print(sol)
+        if update:
+            self.kpar = sol[:self.dim+1]
+            self.spar = sol[self.dim+1]
+            self.cond()
+        return sol, ll
+    
+    def mtune(self, N=10, verbose=False):
+        lmin = 1e6
+        for i in range(N):
+            sol, ll = self.default_tune(verbose=verbose)
+            if ll < lmin:
+                lmin = ll
+                best_sol = sol
+        self.setpar(best_sol[:self.dim+1], best_sol[self.dim+1], cond=True)
+        return best_sol
+    
+    def __str__(self):
+        strout = ""
+        strout += "kernel parameters : " + str(list(self.kpar)) + "\n"
+        strout += "relative lengthscale : " + ", ".join(["{:.2f}".format(el) 
+            for el in list(self.kpar[1:]/self.default_tbounds()[1])]) + "\n"
+        strout += "nugget : " + str(self.spar) + "\n"
+        strout += "loglike : " + str(self.default_tune(verbose=False)[1]) + "\n"
+        strout += "optim bounds : \n" + "\n".join([str(el) for el in 
+                                       list(self.bounds)])
+        return strout

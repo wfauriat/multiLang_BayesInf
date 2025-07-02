@@ -1,6 +1,8 @@
 #%%
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
+from pyBI.base import HGP
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo
+
 
 import numpy as np
 import scipy.stats as sst
@@ -10,6 +12,9 @@ import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
+from scipy.optimize import minimize 
+
+np.set_printoptions(suppress=True, precision=5)
 
 # np.random.seed(123)
 ## REFAIRE LOG-LIKELIHOOD en distinguant MEAN(paramsA) et COV(paramsB)
@@ -223,6 +228,50 @@ if case == 2:
 
 
 
+#%%############################################################################
+# TEST OF FITTING GP 
+###############################################################################
+
+gpobj = HGP(xmes, ymes.ravel())
+# gpobj.bounds[-1] = [1e-7, 4*nslvl**2]
+
+# gpobj.bounds[-1] = [1e-2, 1000]
+gpobj.bounds[-1][1] = 1e1
+gpobj.mtune(N=20)
+
+xtest = np.linspace(0.5,5.4,20)
+xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1]).T
+
+ypred = gpobj.m_predict(xtest)
+spred = np.diag(gpobj.cov_predict(xtest))
+ypred0 = gpobj.m_predict(xmes)
+spred0 = np.diag(gpobj.cov_predict(xmes))
+
+fig, ax = plt.subplots(1,2, figsize=(9,4))
+ax[0].plot(xmes[:,0], gpobj.m_predict(xmes), 'x-b')
+ax[0].fill_between(x=xmes[:,0], y1=ypred0 + 2*spred0**0.5,
+                y2=ypred0 -2*spred0**0.5, alpha=0.2, color='b')
+ax[0].plot(xmes[:,0], ymes.ravel(), 'or')
+ax[0].plot(xtest[:,0], ypred, 'x-m')
+ax[0].plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
+ax[0].fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
+                y2=ypred -2*spred**0.5, alpha=0.2, color='m')
+
+
+ax[1].plot(modeltrue(xtest, b0).ravel(), ypred, 'ob')
+ax[1].plot(ypred, ypred, '-k')
+
+print(gpobj)
+
+#%%
+
+fig, ax = MCalgo.post_visuobs(0)
+ax.plot(xtest[:,0], ypred, 'xm')
+ax.plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
+ax.fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
+                y2=ypred-2*spred**0.5, alpha=0.2, color='m')
+ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
+
 #%%
 
 # how to appropriately store infered parameter so that it works for different
@@ -233,173 +282,30 @@ if case == 2:
 # cond_var or no cond_var : "x"
 
 
+# class GaussLike():
+#     def __init__(self, obs, gmod=None, x=None):
+#         self.obs = obs
+#         self.x = x
+#         self.gmod = gmod
+#         self.Ndata = obs.shape[0]
+#         self.dimdata = obs.shape[1]
 
-from scipy.optimize import minimize 
-
-np.set_printoptions(suppress=True, precision=3)
-
-class GaussLike():
-    def __init__(self, obs, gmod=None, x=None):
-        self.obs = obs
-        self.x = x
-        self.gmod = gmod
-        self.Ndata = obs.shape[0]
-        self.dimdata = obs.shape[1]
-
-    def setpar(self, gpar, kpar, spar):
-        self.gpar = gpar # parameters of g(x,beta)
-        self.kpar = kpar # parameters of s * exp (-d**2/t**2)
-        self.spar = spar # diagonal parameter of sigma (or full Sigma)
+#     def setpar(self, gpar, kpar, spar):
+#         self.gpar = gpar # parameters of g(x,beta)
+#         self.kpar = kpar # parameters of s * exp (-d**2/t**2)
+#         self.spar = spar # diagonal parameter of sigma (or full Sigma)
     
-    def gpredict(self, x, par=None):
-        ptmp = self.par if par is None else par
-        return self.gmod(x, ptmp) if ptmp is not None else \
-              np.zeros(x.shape[0])
+#     def gpredict(self, x, par=None):
+#         ptmp = self.par if par is None else par
+#         return self.gmod(x, ptmp) if ptmp is not None else \
+#               np.zeros(x.shape[0])
     
 
-
-class HGP():
-    def __init__(self, kpar, spar, XX, y):
-        self.kpar = kpar
-        self.spar = spar
-        self.XX = XX
-        self.y = y
-        self.cond()
-
-    def cond(self):
-        self.k_XX = self.KaXX(self.XX) + np.eye(self.XX.shape[0])*1e-8
-        self.L_XX = np.linalg.cholesky(self.k_XX)
-        self.alpha = np.linalg.solve(self.L_XX.T,
-                                      np.linalg.solve(self.L_XX, self.y))
-
-    def setpar(self, kpar, spar, cond=True):
-        self.kpar = kpar
-        self.spar = spar
-        if cond: self.cond()
-    
-    def raXX(self, X, Y, scl=None):
-        if scl is None: scl = self.kpar[1:]
-        diff = X[:, np.newaxis, :] - Y[np.newaxis, :, :]
-        scaled_diff_sq = (diff / scl)**2
-        squared_weighted_distance = np.sum(scaled_diff_sq, axis=2)
-        return squared_weighted_distance 
-
-    def KaXX(self, X, theta=None, sigma=None):
-        if theta is None: theta = self.kpar[:1]
-        if sigma is None: sigma = [self.kpar[0], self.spar]
-        return sigma[0]**2 * np.exp(-self.raXX(X,X,theta)/2) + \
-            np.eye(X.shape[0])*sigma[1]
-    
-    def KaxX(self, x, X, theta=None, sigma=None):
-        if theta is None: theta = self.kpar[:1]
-        if sigma is None: sigma = [self.kpar[0], self.spar]
-        return sigma[0]**2 * np.exp(-self.raXX(x,X, theta)/2)
-    
-    def m_predict(self, x):
-        K_xX = self.KaxX(x, self.XX)
-        mu_pred = K_xX @ self.alpha
-        return mu_pred
-    
-    def cov_predict(self, x):
-        K_xX = self.KaxX(x, self.XX)
-        v = np.linalg.solve(self.L_XX.T, np.linalg.solve(self.L_XX, K_xX.T))
-        cov_pred = self.KaxX(x, x, self.kpar[:1],
-                        np.array([self.kpar[0], self.spar])) - v.T @ v
-        return cov_pred
-    
-    def loglike(self, par=None):
-        if par is None: params = np.hstack([self.kpar, self.spar])
-        else: params = par
-        d = self.XX.shape[1]
-        N = self.XX.shape[0]
-        s = np.exp(params[0])
-        t = np.exp(params[1:1+d])
-        sn = np.exp(params[1+d])
-        # print(s,t,sn)
-        K_XX = self.KaXX(self.XX, t, [s, sn])
-        L = np.linalg.cholesky(K_XX)
-        log_det_K_noisy = 2 * np.sum(np.log(np.diag(L)))
-        alpha = np.linalg.solve(L.T,np.linalg.solve(L, self.y))
-        data_fit_term = self.y.T @ alpha
-        log_marginal_likelihood = -0.5 * data_fit_term - \
-                        0.5 * log_det_K_noisy - \
-                        0.5 * N * np.log(2 * np.pi)
-        return -log_marginal_likelihood
+# LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
+# LLobj.par = b0
 
 
-# def fmod(x, beta):
-#     return beta[0]*x + beta[1]*x**2
-fmod = modelfit
-b0 = [2, -1, 2, 0]
-theta = np.array([0.5, 10])
-sigma = np.array([1])
-sn = np.array(0.01)
-
-
-LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
-LLobj.par = b0
-
-gpobj = HGP(np.hstack([sigma, theta]), sn, xmes, ymes.ravel())
-
-
-bounds = (
-    (np.log(1e-3), np.log(1e2)),  # sigma_f: e.g., 0.001 to 1000
-    (np.log(1e-3), np.log(1e1)),   # length_scale: e.g., 0.001 to 1000
-    (np.log(1e-3), np.log(1e1)),    # length_scale: e.g., 0.001 to 1000
-    (np.log(1e-8), np.log(1e-4))   # noise_variance: e.g., 1e-6 to 10
-)
-
-result = minimize(
-    fun=gpobj.loglike,
-    x0=np.log([np.var(ymes)*0.001, 1, 100, 0.01]),
-    method='L-BFGS-B',
-    bounds=bounds,
-    # options={'disp': True, 'maxiter': 1000}
-)
-
-print(np.exp(result.x))
-
-xtest = np.linspace(0.5,5.4,20)
-xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*0.1-1]).T
-# sigma = np.exp(result.x[0])
-# theta = np.exp(result.x[1:3])
-# sn = np.exp(result.x[3])
-
-sigma = np.array([5])
-theta = np.array([3.06, 1.16])
-sn = np.array(0.5)
-
-gpobj.setpar(np.hstack([sigma, theta]), sn)
-
-
-# L = np.linalg.cholesky(KaXX(xmes, theta, [sigma, sn]))
-# alpha = np.linalg.solve(L.T, np.linalg.solve(L, ymes.ravel()))
-
-# mu_pred = KaxX(xtest, xmes, theta, sigma) @ alpha
-# v = np.linalg.solve(L, KaxX(xtest, xmes, theta, sigma).T)
-# cov_pred = KaxX(xtest, xtest, theta, sigma) - v.T @ v
-# spred = np.diag(cov_pred)
-
-ypred = gpobj.m_predict(xtest)
-spred = np.diag(gpobj.cov_predict(xtest))
-
-
-# fig, ax = plt.subplots()
-# ax.plot(xmes[:,0], ymes.ravel(), 'or')
-# ax.plot(xtest[:,0], ypred, 'x-b')
-# ax.fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
-#                 y2=ypred -2*spred**0.5, alpha=0.2, color='b')
-
-fig, ax = plt.subplots()
-ax.plot(xmes[:,0], ymes.ravel(), 'or')
-ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'x-b')
-ax.fill_between(x=xmes[:,0],
-                y1=gpobj.m_predict(xmes) + 
-                    2*np.diag(gpobj.cov_predict(xmes))**0.5,
-                y2=gpobj.m_predict(xmes) - 
-                    2*np.diag(gpobj.cov_predict(xmes))**0.5,
-                      alpha=0.2, color='b')
-
+#%%
 
 # from scipy.spatial.distance import cdist
 # print(cdist(xmes[:,0][:,None], xmes[:,0][:,None], metric='sqeuclidean'))
@@ -413,21 +319,71 @@ def meanGauss(x, beta, theta, sigma, Kinv=None, X=None):
 def covGauss(x, theta, sigma, Kinv=None):
     return 4
 
-# obs = ymes
 
-# N = obs.shape[0]
-# d = obs.shape[1]
-# try:
-#     L = np.linalg.cholesky(covf(x))
-# except np.linalg.LinAlgError:
-#     raise ValueError("Covariance matrix is not positive semi-definite "+
-#                         "(cannot perform Cholesky decomposition).")
-# log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
-# diff = meanf(x) - obs
-# mahalanobis_term = np.zeros(N)
-# for i in range(N):
-#     y = np.linalg.solve(L, diff[i, :])
-#     mahalanobis_term[i] = np.sum(y**2)
-# log_likelihood = - (N * d / 2) * np.log(2 * np.pi) \
-#             - (N / 2) * log_det_sigma \
-#             - (1 / 2) * np.sum(mahalanobis_term)
+# %%
+
+# #%%
+# ## CODE TO VERIFY GP IMPLEMENTATION
+# # def fmod(x, beta):
+# #     return beta[0]*x + beta[1]*x**2
+# # fmod = modelfit
+# b0 = [2, -1, 2, 0]
+# theta = [1, 0.1]
+# sigma = 1
+# sn = 0.1
+# # theta = [3.17435, 4.24163]
+# # sigma = 39.76435
+# # sn = 0.01
+
+
+# xtest = np.linspace(0.5,5.4,20)
+# xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*0.1-1]).T
+
+# kpar = [sigma] + theta
+# spar = sn
+
+# def raXX(X, Y, scl=theta):
+#     diff = X[:, np.newaxis, :] - Y[np.newaxis, :, :]
+#     scaled_diff_sq = (diff / scl)**2
+#     squared_weighted_distance = np.sum(scaled_diff_sq, axis=2)
+#     return squared_weighted_distance 
+
+# def KaXX(X, theta=theta, sigma=[sigma, sn]):
+#     return sigma[0]**2 * np.exp(-raXX(X,X,theta)/2) + \
+#         np.eye(X.shape[0])*sigma[1]
+
+# def KaxX(x, X, theta=theta, sigma=[sigma, sn]):
+#     return sigma[0]**2 * np.exp(-raXX(x,X, theta)/2)
+
+# XX = xmes
+# k_XX = KaXX(xmes) + np.eye(xmes.shape[0])*1e-8
+# L_XX = np.linalg.cholesky(k_XX)
+# alpha = np.linalg.solve(L_XX.T, np.linalg.solve(L_XX, ymes.ravel()))
+
+# def m_predict(x):
+#     K_xX = KaxX(x, XX)
+#     mu_pred = K_xX @ alpha
+#     return mu_pred
+
+# def cov_predict(x):
+#     K_xX = KaxX(x, XX)
+#     v = np.linalg.solve(L_XX, K_xX.T)
+#     cov_pred = KaxX(x, x) - v.T @ v
+#     return cov_pred
+
+# ypred = m_predict(xtest)
+# spred = np.diag(cov_predict(xtest))
+
+# fig, ax = plt.subplots(1,2, figsize=(8,5))
+# ax[0].plot(xmes[:,0], ymes.ravel(), 'or')
+# ax[0].plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sk', alpha=0.2)
+# ax[0].plot(xmes[:,0], m_predict(xmes), '.-b')
+# ax[0].plot(xtest[:,0], m_predict(xtest), 'xk')
+# ax[0].plot(xtest[:,0], ypred + 2*spred, '.m', ms=2)
+# ax[0].plot(xtest[:,0], ypred - 2*spred, '.m', ms=2)
+# ax[1].plot(xmes[:,1], ymes.ravel(), 'or')
+# ax[1].plot(xtest[:,1], modeltrue(xtest, b0).ravel(), 'sk', alpha=0.2)
+# ax[1].plot(xmes[:,1], m_predict(xmes), '.-b')
+# ax[1].plot(xtest[:,1], m_predict(xtest), 'xk')
+# ax[1].plot(xtest[:,1], ypred + 2*spred, '.m', ms=2)
+# ax[1].plot(xtest[:,1], ypred - 2*spred, '.m', ms=2)
