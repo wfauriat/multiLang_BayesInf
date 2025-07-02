@@ -262,12 +262,13 @@ gp_optimized = GaussianProcess(kernel_func=optimized_kernel, noise_variance=opti
 gp_optimized.fit(X_train, y_train)
 y_pred_opt_mean, y_pred_opt_std = gp_optimized.predict(X_test, return_std=True)
 
-gpobj.setpar([optimized_sigma_f, optimized_length_scale], optimized_noise_variance)
-# gpobj.mtune(20)
+# gpobj.setpar([optimized_sigma_f, optimized_length_scale], optimized_noise_variance)
+gpobj.bounds[-1][1]=4e-2
+gpobj.mtune(20)
 print(gpobj)
 
 ypred = gpobj.m_predict(X_test)
-spred = np.diag(gpobj.cov_predict(X_test, noise=False))
+spred = np.diag(gpobj.cov_predict(X_test, noise=True))
 
 # Plotting with optimized hyperparameters
 plt.figure(figsize=(12, 7))

@@ -232,26 +232,28 @@ if case == 2:
 # TEST OF FITTING GP 
 ###############################################################################
 
+# xmes = XX
 gpobj = HGP(xmes, ymes.ravel())
+
 # gpobj.bounds[-1] = [1e-7, 4*nslvl**2]
 
 # gpobj.bounds[-1] = [1e-2, 1000]
-gpobj.bounds[-1][1] = 1e1
+# gpobj.bounds[-1][1] = 1e1
 gpobj.mtune(N=20)
 
 xtest = np.linspace(0.5,5.4,20)
-xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1]).T
+xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1-0.5]).T
 
 ypred = gpobj.m_predict(xtest)
-spred = np.diag(gpobj.cov_predict(xtest))
+spred = np.diag(gpobj.cov_predict(xtest, noise=True))
 ypred0 = gpobj.m_predict(xmes)
-spred0 = np.diag(gpobj.cov_predict(xmes))
+spred0 = np.diag(gpobj.cov_predict(xmes, noise=True))
 
 fig, ax = plt.subplots(1,2, figsize=(9,4))
-ax[0].plot(xmes[:,0], gpobj.m_predict(xmes), 'x-b')
+ax[0].plot(xmes[:,0], ymes.ravel(), 'or')
+ax[0].plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 ax[0].fill_between(x=xmes[:,0], y1=ypred0 + 2*spred0**0.5,
                 y2=ypred0 -2*spred0**0.5, alpha=0.2, color='b')
-ax[0].plot(xmes[:,0], ymes.ravel(), 'or')
 ax[0].plot(xtest[:,0], ypred, 'x-m')
 ax[0].plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
 ax[0].fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
