@@ -234,15 +234,12 @@ if case == 2:
 
 # xmes = XX
 gpobj = HGP(xmes, ymes.ravel())
-
-# gpobj.bounds[-1] = [1e-7, 4*nslvl**2]
-
 # gpobj.bounds[-1] = [1e-2, 1000]
-# gpobj.bounds[-1][1] = 1e1
-gpobj.mtune(N=20)
+
+gpobj.mtune(N=10)
 
 xtest = np.linspace(0.5,5.4,20)
-xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1-0.5]).T
+xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1-1]).T
 
 ypred = gpobj.m_predict(xtest)
 spred = np.diag(gpobj.cov_predict(xtest, noise=True))
@@ -284,42 +281,72 @@ ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 # cond_var or no cond_var : "x"
 
 
-# class GaussLike():
-#     def __init__(self, obs, gmod=None, x=None):
-#         self.obs = obs
-#         self.x = x
-#         self.gmod = gmod
-#         self.Ndata = obs.shape[0]
-#         self.dimdata = obs.shape[1]
+class GaussLike():
+    def __init__(self, obs, gmod=None, x=None):
+        self.obs = obs
+        self.x = x
+        if gmod is None:
+            self.gmod = lambda x, v: 0 
+        else: self.gmod = gmod
+        self.Ndata = obs.shape[0]
+        self.dimdata = obs.shape[1]
 
-#     def setpar(self, gpar, kpar, spar):
-#         self.gpar = gpar # parameters of g(x,beta)
-#         self.kpar = kpar # parameters of s * exp (-d**2/t**2)
-#         self.spar = spar # diagonal parameter of sigma (or full Sigma)
+    def setpar(self, gpar, kpar, spar):
+        self.gpar = gpar # parameters of g(x,beta)
+        self.kpar = kpar # parameters of s * exp (-d**2/t**2)
+        self.spar = spar # diagonal parameter of sigma (or full Sigma)
     
-#     def gpredict(self, x, par=None):
-#         ptmp = self.par if par is None else par
-#         return self.gmod(x, ptmp) if ptmp is not None else \
-#               np.zeros(x.shape[0])
+    def g_predict(self, x, par=None):
+        ptmp = self.gpar if par is None else par
+        return self.gmod(x, ptmp) if ptmp is not None else \
+              np.zeros(x.shape[0])
     
+    def gp_init(self):
+        self.mgp = HGP(self.x, np.ravel(self.obs - \
+                       self.g_predict(self.x, self.gpar)))
+        # self.mgp.mtune()
+    
+    def mean(self, x):
+        return self.g_predict(x) + self.mgp.m_predict(x)
+    
+    def cov(self, x):
+        return self.mgp.cov_predict(x, noise=True)
 
-# LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
-# LLobj.par = b0
+    def loglike(self):
+        N = self.obs.shape[0]
+        d = self.obs.shape[1]
+        try:
+            L = np.linalg.cholesky(self.cov(self.x))
+        except np.linalg.LinAlgError:
+            raise ValueError("Covariance matrix is not positive semi-definite "+
+                             "(cannot perform Cholesky decomposition).")
+        log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
+        diff = self.mean(self.x) - self.obs
+        mahalanobis_term = np.zeros(N)
+        for i in range(N):
+            y = np.linalg.solve(L, diff[i, :])
+            mahalanobis_term[i] = np.sum(y**2)
+        log_likelihood = - (N * d / 2) * np.log(2 * np.pi) \
+                    - (N / 2) * log_det_sigma \
+                    - (1 / 2) * np.sum(mahalanobis_term)
+        return log_likelihood
+
+LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
+LLobj.setpar(gpar=b0[:3], kpar=[5,1,1], spar=0.5)
+LLobj.gp_init()
+LLobj.mgp.setpar(LLobj.kpar, LLobj.spar)
+print(LLobj.loglike())
+
+fig, ax = plt.subplots()
+ax.plot(xmes[:,0], np.ravel(ymes), 'or')
+ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)), 'xb')
+ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) + \
+        2* np.diag(LLobj.cov(xmes)), '.b')
+ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) - \
+        2* np.diag(LLobj.cov(xmes)), '.b')
+ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
 
 
-#%%
-
-# from scipy.spatial.distance import cdist
-# print(cdist(xmes[:,0][:,None], xmes[:,0][:,None], metric='sqeuclidean'))
-# print(rXX(xmes[:,0][:,None], xmes[:,0][:,None]))
-
-def gpm(x, theta, sigma, Kinv=None, X=None):
-    return x*theta*sigma
-
-def meanGauss(x, beta, theta, sigma, Kinv=None, X=None):
-    return fmod(x, beta) + gpm(x, theta, sigma, Kinv, X)
-def covGauss(x, theta, sigma, Kinv=None):
-    return 4
 
 
 # %%
@@ -389,3 +416,8 @@ def covGauss(x, theta, sigma, Kinv=None):
 # ax[1].plot(xtest[:,1], m_predict(xtest), 'xk')
 # ax[1].plot(xtest[:,1], ypred + 2*spred, '.m', ms=2)
 # ax[1].plot(xtest[:,1], ypred - 2*spred, '.m', ms=2)
+
+
+# from scipy.spatial.distance import cdist
+# print(cdist(xmes[:,0][:,None], xmes[:,0][:,None], metric='sqeuclidean'))
+# print(rXX(xmes[:,0][:,None], xmes[:,0][:,None]))
