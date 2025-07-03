@@ -1,4 +1,7 @@
 #%%
+
+from itertools import chain
+
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
 from pyBI.base import HGP
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo
@@ -234,12 +237,12 @@ if case == 2:
 
 # xmes = XX
 gpobj = HGP(xmes, ymes.ravel())
-# gpobj.bounds[-1] = [1e-2, 1000]
+# gpobj.bounds[-1] = [1e0, 1e1]
 
 gpobj.mtune(N=10)
 
-xtest = np.linspace(0.5,5.4,20)
-xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1-1]).T
+xtest = np.linspace(0.5,5.4,100)
+xtest = np.vstack([xtest, np.random.randn(xtest.shape[0])*nsp1+biasp1+0]).T
 
 ypred = gpobj.m_predict(xtest)
 spred = np.diag(gpobj.cov_predict(xtest, noise=True))
@@ -248,11 +251,12 @@ spred0 = np.diag(gpobj.cov_predict(xmes, noise=True))
 
 fig, ax = plt.subplots(1,2, figsize=(9,4))
 ax[0].plot(xmes[:,0], ymes.ravel(), 'or')
+ax[0].plot(xmes[:,0], modeltrue(xmes, b0).ravel(), 'sk', alpha=0.2, ms=3)
 ax[0].plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 ax[0].fill_between(x=xmes[:,0], y1=ypred0 + 2*spred0**0.5,
                 y2=ypred0 -2*spred0**0.5, alpha=0.2, color='b')
-ax[0].plot(xtest[:,0], ypred, 'x-m')
-ax[0].plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
+ax[0].plot(xtest[:,0], ypred, 'x-m', ms=2, lw=0.5)
+ax[0].plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2, ms=3)
 ax[0].fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
                 y2=ypred -2*spred**0.5, alpha=0.2, color='m')
 
@@ -271,15 +275,11 @@ ax.fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
                 y2=ypred-2*spred**0.5, alpha=0.2, color='m')
 ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 
+
 #%%
 
-# how to appropriately store infered parameter so that it works for different
-# application cases ?
-# par_vect = [[fmod_par : "beta",
-#              gpm_par : "theta",
-#              extra_cov_par : "sigma" or "Sigma"]]
-# cond_var or no cond_var : "x"
-
+# btest = b0
+btest = [1, -0.5, 1]
 
 class GaussLike():
     def __init__(self, obs, gmod=None, x=None):
@@ -303,14 +303,16 @@ class GaussLike():
     
     def gp_init(self):
         self.mgp = HGP(self.x, np.ravel(self.obs - \
-                       self.g_predict(self.x, self.gpar)))
+                       self.g_predict(self.x, par=self.gpar)))
+        self.mgp.setpar(self.kpar, self.spar)
         # self.mgp.mtune()
     
     def mean(self, x):
         return self.g_predict(x) + self.mgp.m_predict(x)
     
     def cov(self, x):
-        return self.mgp.cov_predict(x, noise=True)
+        return self.mgp.cov_predict(x, noise=False) + \
+                np.eye(x.shape[0])*self.spar
 
     def loglike(self):
         N = self.obs.shape[0]
@@ -332,9 +334,8 @@ class GaussLike():
         return log_likelihood
 
 LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
-LLobj.setpar(gpar=b0[:3], kpar=[5,1,1], spar=0.5)
+LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
 LLobj.gp_init()
-LLobj.mgp.setpar(LLobj.kpar, LLobj.spar)
 print(LLobj.loglike())
 
 fig, ax = plt.subplots()
@@ -346,6 +347,83 @@ ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) - \
         2* np.diag(LLobj.cov(xmes)), '.b')
 ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
 
+
+#%%
+# how to appropriately store infered parameter so that it works for different
+# application cases ?
+# par_vect = [[fmod_par : "beta",
+#              gpm_par : "theta",
+#              extra_cov_par : "sigma" or "Sigma"]]
+# cond_var or no cond_var : "x"
+
+# print("\n".join([str(rndUs[i]) for i in range(3)]))
+# print(str(rnds))
+
+lvarobj = {'gpar': [],
+           'kpar': [],
+           'spar': []}
+
+lvarobj['gpar'].extend(rndUs)
+lvarobj['spar'].append(rnds)
+
+vdim = np.sum([len(lvarobj[el]) for el in lvarobj.keys()])
+
+# print("\n".join([str(el) for el in lvarobj.values()]))
+
+NMCMC = 30
+
+MCchain = np.zeros((NMCMC, vdim)) # Initialisation to size on inference pb vdim
+
+def draw_all_vars():
+    rnd = np.zeros(vdim)
+    i = 0
+    for el in lvarobj.keys():
+        for k in range(len(lvarobj[el])):
+            rnd[i] = lvarobj[el][k].draw()
+            i+=1
+    return rnd
+
+def place_var():
+    place_g = len(lvarobj['gpar'])
+    place_k = len(lvarobj['kpar'])
+    place_s = len(lvarobj['spar'])
+    return place_g, place_g + place_k, place_g + place_k + place_s
+
+def category_from_chain(x, i):
+    gpar = x[i][:place_var()[0]]
+    kpar = x[i][place_var()[0]:place_var()[1]]
+    spar = x[i][place_var()[1]:place_var()[2]]
+    return gpar, kpar, spar
+
+MCchain[0,:] = draw_all_vars()
+
+catElement = category_from_chain(MCchain, 0)
+print(*catElement)
+LLobj.setpar(catElement[0], catElement[1], catElement[2])
+LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
+print()
+print(LLobj.gpar)
+print(LLobj.kpar)
+print(LLobj.spar)
+print()
+log_state = LLobj.loglike()
+print(log_state)
+
+# for i in range(NMCMC):
+#     MCchain[i, :] = drawall()
+
+
+# for i in range(NMCMC):
+#     MCchain[i,:] = np.array(list(chain(*[[float(lvarobj[el][k].draw()) 
+#                               for k in range(len(lvarobj[el]))]
+#                               for el in lvarobj.keys()])))
+            
+
+
+
+    # def initialize(self, obsObj: ObsVar, varObj: RandVar, discrObj: RandVar,
+    #                 svar: float = 1., sdisc: Optional[float] = None,
+    #                 Lblock: Optional[np.ndarray] = None):
 
 
 
