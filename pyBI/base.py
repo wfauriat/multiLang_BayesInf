@@ -65,9 +65,10 @@ class InvGaussVar(RandVar):
         return prop if prop != -np.inf else 0.0
 
     def draw(self, N=1):
-        return np.random.wald(mean=self.param[0]*self.param[2],
+        rnd = np.random.wald(mean=self.param[0]*self.param[2],
                               scale=self.param[2], size=N) + self.param[1]
-    
+        return rnd[0] if N==1 else rnd
+
     def mean(self):
         return self.param[0]*self.param[2] + self.param[1] if \
               len(self.param) > 2 else self.param[0] + self.param[1]

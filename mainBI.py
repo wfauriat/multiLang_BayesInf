@@ -4,7 +4,7 @@ from itertools import chain
 
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
 from pyBI.base import HGP
-from pyBI.inference import MHalgo, MHwGalgo, InfAlgo
+from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
 
 
 import numpy as np
@@ -268,12 +268,12 @@ print(gpobj)
 
 #%%
 
-fig, ax = MCalgo.post_visuobs(0)
-ax.plot(xtest[:,0], ypred, 'xm')
-ax.plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
-ax.fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
-                y2=ypred-2*spred**0.5, alpha=0.2, color='m')
-ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
+# fig, ax = MCalgo.post_visuobs(0)
+# ax.plot(xtest[:,0], ypred, 'xm')
+# ax.plot(xtest[:,0], modeltrue(xtest, b0).ravel(), 'sm', alpha=0.2)
+# ax.fill_between(x=xtest[:,0], y1=ypred + 2*spred**0.5,
+#                 y2=ypred-2*spred**0.5, alpha=0.2, color='m')
+# ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 
 
 #%%
@@ -338,14 +338,14 @@ LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
 LLobj.gp_init()
 print(LLobj.loglike())
 
-fig, ax = plt.subplots()
-ax.plot(xmes[:,0], np.ravel(ymes), 'or')
-ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)), 'xb')
-ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) + \
-        2* np.diag(LLobj.cov(xmes)), '.b')
-ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) - \
-        2* np.diag(LLobj.cov(xmes)), '.b')
-ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
+# fig, ax = plt.subplots()
+# ax.plot(xmes[:,0], np.ravel(ymes), 'or')
+# ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)), 'xb')
+# ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) + \
+#         2* np.diag(LLobj.cov(xmes)), '.b')
+# ax.plot(xmes[:,0], np.ravel(LLobj.mean(xmes)) - \
+#         2* np.diag(LLobj.cov(xmes)), '.b')
+# ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
 
 
 #%%
@@ -359,58 +359,98 @@ ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
 # print("\n".join([str(rndUs[i]) for i in range(3)]))
 # print(str(rnds))
 
+
+pl = -3
+ph = 3
+sinvg = [0.2, -0.1, 2]
+# rndUs = [UnifVar([pl,ph]) for _ in range(3)]
+rndUs = [UnifVar([0.5,2.5]),UnifVar([-1.5,-0.5]), UnifVar([1.5,2.5]) ]
+rnds = InvGaussVar(param=[0.01, -0.01, 5])
+rndk = []
+rndk.append(UnifVar([1e-1, 100]))
+rndk.append(UnifVar([2e-1, 20]))
+rndk.append(UnifVar([1e-2, 2]))
+
 lvarobj = {'gpar': [],
            'kpar': [],
            'spar': []}
 
 lvarobj['gpar'].extend(rndUs)
+lvarobj['kpar'].extend(rndk)
 lvarobj['spar'].append(rnds)
 
-vdim = np.sum([len(lvarobj[el]) for el in lvarobj.keys()])
+svar2 = [[0.1, 0.1, 0.1], [10, 1, 0.1], [0.05]]
+
+MCalgo2 = MHwGalgo2(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+                       verbose=verbose)
+MCalgo2.initialize(LLobj, lvarobj, svar2)
+MCout, llout = MCalgo2.runInference()
+
+# vdim = np.sum([len(lvarobj[el]) for el in lvarobj.keys()])
 
 # print("\n".join([str(el) for el in lvarobj.values()]))
 
-NMCMC = 30
+# NMCMC = 30
 
-MCchain = np.zeros((NMCMC, vdim)) # Initialisation to size on inference pb vdim
+# MCchain = np.zeros((NMCMC, vdim)) # Initialisation to size on inference pb vdim
 
-def draw_all_vars():
-    rnd = np.zeros(vdim)
-    i = 0
-    for el in lvarobj.keys():
-        for k in range(len(lvarobj[el])):
-            rnd[i] = lvarobj[el][k].draw()
-            i+=1
-    return rnd
+# def draw_all_vars():
+#     rnd = np.zeros(vdim)        
+#     i = 0
+#     for el in lvarobj.keys():
+#         for k in range(len(lvarobj[el])):
+#             rnd[i] = lvarobj[el][k].draw()
+#             i+=1
+#     return rnd
 
-def place_var():
-    place_g = len(lvarobj['gpar'])
-    place_k = len(lvarobj['kpar'])
-    place_s = len(lvarobj['spar'])
-    return place_g, place_g + place_k, place_g + place_k + place_s
+# def place_var():
+#     place_g = len(lvarobj['gpar'])
+#     place_k = len(lvarobj['kpar'])
+#     place_s = len(lvarobj['spar'])
+#     return place_g, place_g + place_k, place_g + place_k + place_s
 
-def category_from_chain(x, i):
-    gpar = x[i][:place_var()[0]]
-    kpar = x[i][place_var()[0]:place_var()[1]]
-    spar = x[i][place_var()[1]:place_var()[2]]
-    return gpar, kpar, spar
+# def category_from_chain(x, i):
+#     gpar = list(x[i][:place_var()[0]])
+#     kpar = list(x[i][place_var()[0]:place_var()[1]])
+#     spar = list(x[i][place_var()[1]:place_var()[2]])
+#     return gpar, kpar, spar
 
-MCchain[0,:] = draw_all_vars()
+# MCchain[0,:] = draw_all_vars()
 
-catElement = category_from_chain(MCchain, 0)
-print(*catElement)
-LLobj.setpar(catElement[0], catElement[1], catElement[2])
-LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
-print()
-print(LLobj.gpar)
-print(LLobj.kpar)
-print(LLobj.spar)
-print()
-log_state = LLobj.loglike()
-print(log_state)
+# catElem = category_from_chain(MCchain, 0)
+# # print(*catElement)
+# LLobj.setpar(catElem[0], catElem[1], catElem[2])
+# # LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
+# print("gpar : ", LLobj.gpar)
+# print("kpar : ", LLobj.kpar)
+# print("spar : ", LLobj.spar)
 
-# for i in range(NMCMC):
-#     MCchain[i, :] = drawall()
+# log_state = LLobj.loglike()
+# log_prior = [[lvarobj[el][k].logprior(catElem[j][k])
+#                for k in range(len(lvarobj[el]))] 
+#                  for (el,j) in zip(lvarobj.keys(),range(3))]
+# log_prior_sum = np.sum(list(chain(*log_prior)))
+
+# print("log state :", log_state)
+# print("log_prior :", log_prior_sum)
+
+# svar = [[0.1, 0.1, 0.1], [10, 1, 0.1], [0.05]]
+
+# def proposal_all():
+#     catProp = [[], [], []]
+#     for (el,j) in zip(lvarobj.keys(), range(3)):
+#         for k in range(len(lvarobj[el])):
+#             catProp[j].append(lvarobj[el][k].proposal(
+#                 catElem[j][k], svar[j][k]))
+#     return catProp
+
+# print()
+# print(np.hstack([np.c_[list(chain(*catElem))],
+#                   np.c_[list(chain(*proposal_all()))]]))
+
+
+
+
 
 
 # for i in range(NMCMC):
