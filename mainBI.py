@@ -3,7 +3,7 @@
 from itertools import chain
 
 from pyBI.base import UnifVar, InvGaussVar, ObsVar
-from pyBI.base import HGP
+from pyBI.base import HGP, GaussLike
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
 
 
@@ -18,6 +18,15 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from scipy.optimize import minimize 
 
 np.set_printoptions(suppress=True, precision=5)
+
+#%%####
+# FOR DEVELOPMENT PURPOSES
+#
+
+import importlib
+import pyBI.base
+new_mod = importlib.reload(pyBI.base)
+GaussLike = new_mod.GaussLike
 
 # np.random.seed(123)
 ## REFAIRE LOG-LIKELIHOOD en distinguant MEAN(paramsA) et COV(paramsB)
@@ -37,7 +46,8 @@ inftype = 'MH'
 
 if case == 0:
     def modeltrue(x,b):
-        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + 4*x[:,1])
+        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + \
+                             4*x[:,1] + 0.2*x[:,0]**3)
 
     def modelfit(x,b):
         return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
@@ -136,8 +146,8 @@ if case == 2:
 ############## FULLY ANALYTICAL REGRESSION EXAMPLE
 if case == 0:
     Ndim = 3
-    pl = -3
-    ph = 3
+    pl = -5
+    ph = 5
     sinvg = [0.2, -0.1, 2]
 
     sm = [0.4, 0.4, 0.05]
@@ -276,67 +286,20 @@ print(gpobj)
 # ax.plot(xmes[:,0], gpobj.m_predict(xmes), 'xb')
 
 
-#%%
+#%%############################################################################
+# VERIFICATION OF GAUSSIAN LIKELIHOOD
+###############################################################################
 
-# btest = b0
-btest = [1, -0.5, 1]
+btest = b0
+# btest = [-2, -1, 2]
+# btest = MCalgo.MAP
 
-class GaussLike():
-    def __init__(self, obs, gmod=None, x=None):
-        self.obs = obs
-        self.x = x
-        if gmod is None:
-            self.gmod = lambda x, v: 0 
-        else: self.gmod = gmod
-        self.Ndata = obs.shape[0]
-        self.dimdata = obs.shape[1]
-
-    def setpar(self, gpar, kpar, spar):
-        self.gpar = gpar # parameters of g(x,beta)
-        self.kpar = kpar # parameters of s * exp (-d**2/t**2)
-        self.spar = spar # diagonal parameter of sigma (or full Sigma)
-    
-    def g_predict(self, x, par=None):
-        ptmp = self.gpar if par is None else par
-        return self.gmod(x, ptmp) if ptmp is not None else \
-              np.zeros(x.shape[0])
-    
-    def gp_init(self):
-        self.mgp = HGP(self.x, np.ravel(self.obs - \
-                       self.g_predict(self.x, par=self.gpar)))
-        self.mgp.setpar(self.kpar, self.spar)
-        # self.mgp.mtune()
-    
-    def mean(self, x):
-        return self.g_predict(x) + self.mgp.m_predict(x)
-    
-    def cov(self, x):
-        return self.mgp.cov_predict(x, noise=False) + \
-                np.eye(x.shape[0])*self.spar
-
-    def loglike(self):
-        N = self.obs.shape[0]
-        d = self.obs.shape[1]
-        try:
-            L = np.linalg.cholesky(self.cov(self.x))
-        except np.linalg.LinAlgError:
-            raise ValueError("Covariance matrix is not positive semi-definite "+
-                             "(cannot perform Cholesky decomposition).")
-        log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
-        diff = self.mean(self.x) - self.obs
-        mahalanobis_term = np.zeros(N)
-        for i in range(N):
-            y = np.linalg.solve(L, diff[i, :])
-            mahalanobis_term[i] = np.sum(y**2)
-        log_likelihood = - (N * d / 2) * np.log(2 * np.pi) \
-                    - (N / 2) * log_det_sigma \
-                    - (1 / 2) * np.sum(mahalanobis_term)
-        return log_likelihood
-
-LLobj = GaussLike(ymes, gmod=modelfit, x=xmes)
-LLobj.setpar(gpar=btest[:3], kpar=[5,1,1], spar=0.5)
-LLobj.gp_init()
+LLobj = GaussLike(ymes, gmod=modelfit, x=xmes,
+                   gpar=btest[:3], kpar=[1,1,1], spar=1)
+LLobj.setpar(gpar=MCalgo.MAP, kpar=[5,1,1], spar=1)
+# LLobj.gp_init()
 print(LLobj.loglike())
+
 
 # fig, ax = plt.subplots()
 # ax.plot(xmes[:,0], np.ravel(ymes), 'or')
@@ -347,29 +310,37 @@ print(LLobj.loglike())
 #         2* np.diag(LLobj.cov(xmes)), '.b')
 # ax.plot(xtest[:,0], np.ravel(LLobj.mean(xtest)), 'x-m')
 
+fig, ax = plt.subplots()
+y0 = LLobj.g_predict(xmes).ravel()
+y1 = LLobj.mgp.m_predict(xmes).ravel()
+y2 = LLobj.mean(xmes).ravel()
+ypostBI = MCalgo.post_obs()
+ax.plot(xmes[:,0], ypostBI.T, '.k', ms=3)
+ax.plot(xmes[:,0], ymes.ravel(), 'or', ms=8, label='observation')
+ax.plot(xmes[:,0], y0, 'g', label='trend')
+ax.plot(xmes[:,0], y1, 'm', label='gp correc, errmod')
+ax.plot(xmes[:,0], y2 + 2*np.diag(LLobj.cov(xmes)), '.b')
+ax.plot(xmes[:,0], y2 - 2*np.diag(LLobj.cov(xmes)), '.b')
+# ax.plot(xmes[:,0], y0+y1, 'b')
+ax.plot(xmes[:,0], y2 , '-xb', label='predicted mean')
+
+ax.legend()
 
 #%%
-# how to appropriately store infered parameter so that it works for different
-# application cases ?
-# par_vect = [[fmod_par : "beta",
-#              gpm_par : "theta",
-#              extra_cov_par : "sigma" or "Sigma"]]
-# cond_var or no cond_var : "x"
 
-# print("\n".join([str(rndUs[i]) for i in range(3)]))
-# print(str(rnds))
+Nburn2 = 10000
 
 
-pl = -3
-ph = 3
+pl = -5
+ph = 5
 sinvg = [0.2, -0.1, 2]
-# rndUs = [UnifVar([pl,ph]) for _ in range(3)]
-rndUs = [UnifVar([0.5,2.5]),UnifVar([-1.5,-0.5]), UnifVar([1.5,2.5]) ]
-rnds = InvGaussVar(param=[0.01, -0.01, 5])
+rndUs = [UnifVar([pl,ph]) for _ in range(3)]
+# rndUs = [UnifVar([0.5,2.5]),UnifVar([-1.5,-0.5]), UnifVar([1.5,2.5]) ]
+rnds = InvGaussVar(param=[0.05, -0.01, 2])
 rndk = []
-rndk.append(UnifVar([1e-1, 100]))
-rndk.append(UnifVar([2e-1, 20]))
-rndk.append(UnifVar([1e-2, 2]))
+rndk.append(UnifVar([1e-1, 200]))
+rndk.append(UnifVar([2e-1, 10]))
+rndk.append(UnifVar([1e-2, 3]))
 
 lvarobj = {'gpar': [],
            'kpar': [],
@@ -379,12 +350,22 @@ lvarobj['gpar'].extend(rndUs)
 lvarobj['kpar'].extend(rndk)
 lvarobj['spar'].append(rnds)
 
+
 svar2 = [[0.1, 0.1, 0.1], [10, 1, 0.1], [0.05]]
 
-MCalgo2 = MHwGalgo2(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+MCalgo2 = MHwGalgo2(NMCMC, Nthin=20, Nburn=Nburn2, is_adaptive=True,
                        verbose=verbose)
 MCalgo2.initialize(LLobj, lvarobj, svar2)
-MCout, llout = MCalgo2.runInference()
+MCout2, llout2 = MCalgo2.runInference()
+
+#%%
+
+fig, ax = MCalgo2.post_visupar()
+fig.tight_layout(pad=0)
+MCalgo2.hist_alldim()
+
+
+
 
 # vdim = np.sum([len(lvarobj[el]) for el in lvarobj.keys()])
 

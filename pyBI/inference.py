@@ -98,6 +98,13 @@ class InfAlgo2:
                 x.append(catElem[j][k])
         return x
     
+    def flat_varobj(self, varobj):
+        flat_list = []
+        for el in varobj.keys():
+            for j in range(len(varobj[el])):
+                flat_list.append(varobj[el][j])
+        return flat_list
+    
     def proposal_all(self, x0, di=None):
         catElem = self.category_from_chain(x0)
         catProp = [[], [], []]
@@ -121,8 +128,6 @@ class InfAlgo2:
         """
         catElem = self.category_from_chain(self.MCchain[i])
         self.obsObj.setpar(catElem[0], catElem[1], catElem[2])
-        # self.obsObj.mgp.setpar(catElem[1], catElem[2])
-        self.obsObj.gp_init()
         log_state = self.obsObj.loglike()
         log_prior = [[self.varObj[el][k].logprior(catElem[j][k])
                     for k in range(len(self.varObj[el]))] 
@@ -221,8 +226,8 @@ class InfAlgo2:
         MC = self.idx_chain
         LL = self.cut_llchain[self.sorted_indices]
         quadrans = list(combinations(
-                ['v' + str(i) for i in range(self.Ndim)] + ['d'],2))
-        quad_idx = list(combinations(list(range(self.Ndim+1)),2))
+                ['v' + str(i) for i in range(self.vdim)],2))
+        quad_idx = list(combinations(list(range(self.vdim)),2))
         Nbplot = int(np.ceil(np.sqrt(len(quadrans))))
         k = 0
         fig, ax = subplots(Nbplot, Nbplot)
@@ -247,41 +252,32 @@ class InfAlgo2:
         """
         MC = self.cut_chain
         Nc = int(self.cut_chain.shape[0]/4)
-        labels = ['v' + str(i) for i in range(self.Ndim)] + ['d']
         xi = np.linspace(MC[:,di].min(), MC[:,di].max())
         kdes = [gaussian_kde(MC[i*Nc:(i+1)*Nc,di]) for i in range(0,4)]
+        flat_varobj = self.flat_varobj(self.varObj)
         if axf is None:
             fig, ax = subplots(2,1)
             ax[0].plot(self.raw_chain[:(1*Nc*self.Nthin + self.Nburn),di],
                                     '-k', lw=0.5)
             ax[1].hist(self.idx_chain[:,di], edgecolor='b', alpha=0.4)
             axx = ax[1].twinx()
-            ax[1].set_xlabel(labels[di])
         else: 
             axf.hist(self.idx_chain[:,di], edgecolor='b', alpha=0.4)
-            axf.set_xlabel(labels[di])
             axx = axf.twinx()
         for i in range(4):
             axx.plot(xi, kdes[i].pdf(xi), 'k')
         if show_prior:
-            if di < self.Ndim:
-                for i in range(4):
+                for i in range(self.vdim):
                     xp = np.linspace(
-                        self.varObj[di].min,self.varObj[di].max, 100)
-                    axx.plot(xp, np.exp([self.varObj[di].logprior(x) 
-                                        for x in xp]), 'r')
-            else:
-                for i in range(4):
-                    xp = np.linspace(
-                        self.discrObj.min,self.discrObj.max, 100)
-                    axx.plot(xp, np.exp([self.discrObj.logprior(x) 
+                        flat_varobj[di].min,flat_varobj[di].max, 100)
+                    axx.plot(xp, np.exp([flat_varobj[di].logprior(x) 
                                         for x in xp]), 'r')
         if axf is None: return fig, ax
         else: return axf
     
     def hist_alldim(self, figsize=(10,4)):
-        fig, ax = subplots(1,self.Ndim+1, figsize=figsize)
-        for i in range(self.Ndim+1):
+        fig, ax = subplots(1,self.vdim, figsize=figsize)
+        for i in range(self.vdim):
             self.diag_chain(di=i, axf=ax[i])
         fig.tight_layout()
 

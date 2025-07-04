@@ -246,3 +246,60 @@ class HGP():
         strout += "optim bounds : \n" + "\n".join([str(el) for el in 
                                        list(self.bounds)])
         return strout
+
+
+class GaussLike():
+    def __init__(self, obs, gmod, x, gpar, kpar, spar):
+        self.obs = obs
+        self.x = x
+        self.gmod = gmod
+        self.Ndata = obs.shape[0]
+        self.dimdata = obs.shape[1]
+        self.gpar = gpar
+        self.kpar = kpar
+        self.spar = spar
+        self.mgp = HGP(self.x, np.ravel(self.obs - \
+                self.g_predict(self.x, par=self.gpar)))
+        self.mgp.setpar(self.kpar, self.spar)
+
+    def setpar(self, gpar, kpar, spar):
+        self.gpar = gpar # parameters of g(x,beta)
+        self.kpar = kpar # parameters of s * exp (-d**2/t**2)
+        self.spar = spar # diagonal parameter of sigma (or full Sigma)
+        self.gp_update()
+    
+    def gp_update(self):
+        self.mgp.y = np.ravel(self.obs - \
+                self.g_predict(self.x, par=self.gpar))
+        self.mgp.setpar(self.kpar, self.spar, cond=True)
+    
+    def g_predict(self, x, par=None):
+        ptmp = self.gpar if par is None else par
+        return self.gmod(x, ptmp) if ptmp is not None else \
+              np.zeros(x.shape[0])
+    
+    def mean(self, x):
+        return self.g_predict(x) + self.mgp.m_predict(x)
+    
+    def cov(self, x):
+        return self.mgp.cov_predict(x, noise=False) + \
+                np.eye(x.shape[0])*self.spar
+
+    def loglike(self):
+        N = self.obs.shape[0]
+        d = self.obs.shape[1]
+        try:
+            L = np.linalg.cholesky(self.cov(self.x))
+        except np.linalg.LinAlgError:
+            raise ValueError("Covariance matrix is not positive semi-definite "+
+                             "(cannot perform Cholesky decomposition).")
+        log_det_sigma = 2.0 * np.sum(np.log(np.diag(L)))
+        diff = self.mean(self.x) - self.obs
+        mahalanobis_term = np.zeros(N)
+        for i in range(N):
+            y = np.linalg.solve(L, diff[i, :])
+            mahalanobis_term[i] = np.sum(y**2)
+        log_likelihood = - (N * d / 2) * np.log(2 * np.pi) \
+                    - (N / 2) * log_det_sigma \
+                    - (1 / 2) * np.sum(mahalanobis_term)
+        return log_likelihood
