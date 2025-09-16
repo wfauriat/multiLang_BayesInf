@@ -37,8 +37,8 @@ casep = 0
 # casep = 1
 # casep = 2
 
-inftype = 'MH'
-# inftype = 'MHwG'
+# inftype = 'MH'
+inftype = 'MHwG'
 
 #%%############################################################################
 # DEFINITION OF APPLICATION / CALIBRATION CASE
@@ -47,7 +47,7 @@ inftype = 'MH'
 if casep == 0:
     def modeltrue(x,b):
         return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + \
-                             4*x[:,1] + 0.2*x[:,0]**3)
+                             1*x[:,1] + 0.02*x[:,0]**3)
 
     def modelfit(x,b):
         return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
@@ -301,7 +301,10 @@ if casep == 0:
 
     LLobj = GaussLike(ymes, gmod=modelfit, x=xmes,
                     gpar=btest[:3], kpar=[1,1,1], spar=1)
-    LLobj.setpar(gpar=MCalgo.MAP, kpar=[5,1,1], spar=1)
+    # LLobj.setpar(gpar=MCalgo.MAP, kpar=[5,1,1], spar=1)
+    LLobj.setpar(gpar=MCalgo.MAP, kpar=gpobj.kpar, spar=gpobj.spar)
+    # LLobj.setpar(gpar=[0, 0, 0], kpar=gpobj.kpar, spar=gpobj.spar)
+    # LLobj.setpar(gpar=[0, 0, 0], kpar=[1, 1, 1], spar=1)
     print(LLobj.loglike())
 
     fig, ax = plt.subplots()

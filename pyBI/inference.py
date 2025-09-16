@@ -648,7 +648,7 @@ class MHwGalgo(InfAlgo):
         self.nacc = np.zeros(self.Ndim+1) 
         for i in range(1,self.N):
             self.MCchain[i] = self.MCchain[i-1]
-            id_rnd = np.random.permutation(self.vdim)
+            id_rnd = np.random.permutation(self.Ndim+1)
             for idx in id_rnd:
                 prop = self.move_uni(idx, self.MCchain[i])
                 self.store(i, prop[:self.Ndim], prop[self.Ndim])
