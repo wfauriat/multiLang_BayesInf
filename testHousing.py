@@ -127,9 +127,30 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from sklearn.gaussian_process.kernels import WhiteKernel
 
+from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import StandardScaler
+
+
+dims = len(dfcens.columns)
+XX = dfcens.values[:,:dims-1]
+# XX = np.float32(dfcens.values[:,2:-1])
+yy = np.float32(dfcens.values[:,-1])
+
+dimtrain = XX.shape[1]
+
+scaler_X = StandardScaler()
+scaler_y = StandardScaler()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    XX, yy, test_size=0.6)
+X_train_scaled = scaler_X.fit_transform(X_train)
+y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
+X_test_scaled = scaler_X.transform(X_test)
 
 # model = Ridge(alpha=0.01)
 # model = LinearRegression()
@@ -138,39 +159,34 @@ from sklearn.preprocessing import StandardScaler
 model = RandomForestRegressor()
 # model = GradientBoostingRegressor()
 
-
-kernel = C(1.0, (1e-3, 1e3)) * RBF([1.0]*6, (1e-2, 1e2)) + \
+kernel = C(1.0, (1e-3, 1e3)) * RBF([1.0]*dimtrain, (1e-2, 1e2)) + \
       WhiteKernel(noise_level_bounds=(1e-3, 1e3))
 gp = GaussianProcessRegressor(kernel=kernel,
                               alpha=1e-5, n_restarts_optimizer=0)
 
 svr = SVR(
-    kernel='rbf',  # Use the Radial Basis Function kernel for non-linear data
-    C=1.0,         # A good starting point for the regularization parameter
-    epsilon=0.1,   # The tolerance for errors
-    gamma='scale'  # A robust default for the kernel coefficient
-)
-scaler_X = StandardScaler()
-scaler_y = StandardScaler()
+    kernel='rbf', C=1.0, epsilon=0.1, gamma='scale')
 
-dims = len(dfcens.columns)
-XX = dfcens.values[:,:dims-1]
-# XX = np.float32(dfcens.values[:,2:-1])
-yy = np.float32(dfcens.values[:,-1])
+mlp_pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('mlp', MLPRegressor(
+        hidden_layer_sizes=(100, 50), # 2 hidden layers with 100 and 50 neurons
+        activation='relu',
+        solver='adam',
+        alpha=0.001,
+        max_iter=300,
+        random_state=42
+    ))
+])
 
-X_train, X_test, y_train, y_test = train_test_split(
-    XX, yy, test_size=0.3)
-
-X_train_scaled = scaler_X.fit_transform(X_train)
-y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
-
-X_test_scaled = scaler_X.transform(X_test)
+# mlp_pipeline.fit(X_train, y_train)
 
 model.fit(X_train, y_train)
 # svr.fit(X_train_scaled, y_train_scaled)
 # gp.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
+# y_pred = mlp_pipeline.predict(X_test)
 # y_pred, sigma = gp.predict(X_test, return_std=True)
 # y_pred_scaled = svr.predict(X_test_scaled)
 # y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
@@ -248,3 +264,4 @@ cmap = ax.scatter((X_test[:,0]+120)*70+354,
                   -(X_test[:,1]-38)*70+312, c=filtsorted,
             cmap='jet', marker='.', s=10, alpha=1)
 fig.colorbar(cmap, ax=ax, label=df.columns[8])
+# %%
