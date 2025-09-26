@@ -119,31 +119,73 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge
 from sklearn.linear_model import ElasticNet
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.svm import SVR
+
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+from sklearn.gaussian_process.kernels import WhiteKernel
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import StandardScaler
 
 # model = Ridge(alpha=0.01)
 # model = LinearRegression()
-model = ElasticNet()
+# model = ElasticNet()
 # model = DecisionTreeRegressor()
-# model = RandomForestClassifier(n_estimators=50, n_jobs=2, max_depth=30)
+model = RandomForestRegressor()
+# model = GradientBoostingRegressor()
+
+
+kernel = C(1.0, (1e-3, 1e3)) * RBF([1.0]*6, (1e-2, 1e2)) + \
+      WhiteKernel(noise_level_bounds=(1e-3, 1e3))
+gp = GaussianProcessRegressor(kernel=kernel,
+                              alpha=1e-5, n_restarts_optimizer=0)
+
+svr = SVR(
+    kernel='rbf',  # Use the Radial Basis Function kernel for non-linear data
+    C=1.0,         # A good starting point for the regularization parameter
+    epsilon=0.1,   # The tolerance for errors
+    gamma='scale'  # A robust default for the kernel coefficient
+)
+scaler_X = StandardScaler()
+scaler_y = StandardScaler()
 
 dims = len(dfcens.columns)
-# XX = dfcens.values[:,:dims-1]
-XX = dfcens.values[:,2:-1]
-yy = dfcens.values[:,-1]
+XX = dfcens.values[:,:dims-1]
+# XX = np.float32(dfcens.values[:,2:-1])
+yy = np.float32(dfcens.values[:,-1])
 
 X_train, X_test, y_train, y_test = train_test_split(
     XX, yy, test_size=0.3)
+
+X_train_scaled = scaler_X.fit_transform(X_train)
+y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
+
+X_test_scaled = scaler_X.transform(X_test)
+
 model.fit(X_train, y_train)
+# svr.fit(X_train_scaled, y_train_scaled)
+# gp.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
+# y_pred, sigma = gp.predict(X_test, return_std=True)
+# y_pred_scaled = svr.predict(X_test_scaled)
+# y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
 y_pred = np.minimum(y_pred, 500000)
 
 r2 = r2_score(y_test, y_pred)
-mue, sigmae = sst.norm.fit(y_test-y_pred)
+
+residuals = y_test-y_pred
+mue, sigmae = sst.norm.fit(residuals)
+mue1, sigmae1 = sst.norm.fit(np.abs(residuals[(y_test>0) & (y_test<100000)]))
+mue2, sigmae2 = sst.norm.fit(np.abs(residuals[(y_test>100000) & (y_test<200000)]))
+mue3, sigmae3 = sst.norm.fit(np.abs(residuals[(y_test>200000) & (y_test<300000)]))
+mue4, sigmae4 = sst.norm.fit(np.abs(residuals[(y_test>300000) & (y_test<400000)]))
+mue5, sigmae5 = sst.norm.fit(np.abs(residuals[(y_test>400000)]))
+
 
 #%%
 
@@ -162,19 +204,47 @@ ax[1,0].stem(X_test[visu_samp,vdim], np.abs(y_test[visu_samp]- y_pred[visu_samp]
               markerfmt='.k', linefmt='k')
 ax[1,0].grid(ls=':')
 ax[1,0].set_title('pred vs test')
-ax[0,1].plot(y_test, y_test-y_pred, '.b')
+ax[0,1].plot(y_test, np.abs(residuals), '.b')
+ax[0,1].plot([0,100000],np.ones(2)*sigmae1,'o-r', lw=2)
+ax[0,1].plot([100000,200000],np.ones(2)*sigmae2,'o-r', lw=2)
+ax[0,1].plot([200000,300000],np.ones(2)*sigmae3,'o-r', lw=2)
+ax[0,1].plot([300000,400000],np.ones(2)*sigmae4,'o-r', lw=2)
+ax[0,1].plot([400000,500000],np.ones(2)*sigmae5,'o-r', lw=2)
+ax[0,1].axhline(y=sigmae, color='k', ls='--')
+ax[0,1].grid(ls=':')
 ax[0,1].set_title('residuals')
-ax[1,1].hist(y_test-y_pred, ec='k', bins=30)
+ax[1,1].hist(residuals, ec='k', bins=30)
 ax[1,1].grid(ls=':')
 ax[1,1].set_yticks([])
 ax[1,1].set_title('residuals')
 ax1 = ax[1,1].twinx()
-sns.kdeplot(y_test-y_pred, ax=ax1, color='r', lw=2)
-ax1.plot(np.sort(y_test-y_pred),
-         sst.norm(mue, sigmae).pdf(np.sort(y_test-y_pred)), color='m', lw=3)
+sns.kdeplot(residuals, ax=ax1, color='r', lw=2)
+ax1.plot(np.sort(residuals),
+         sst.norm(mue, sigmae).pdf(np.sort(residuals)), color='m', lw=3)
 ax1.set_yticks([])
 ax1.set_ylabel('')
 
 print(f"R-squared score on test set: {r2:.2f}")
 print(f"Std of error is : {sigmae:.2f}")
 
+
+# %%
+
+filtsorted = y_pred[np.argsort(y_pred)]
+fig, ax = plt.subplots()
+ax.imshow(img)
+cmap = ax.scatter((X_test[:,0]+120)*70+354,
+                  -(X_test[:,1]-38)*70+312, c=filtsorted,
+            cmap='jet', marker='.', s=10, alpha=1)
+fig.colorbar(cmap, ax=ax, label=df.columns[8])
+
+# %%
+
+
+filtsorted = residuals[np.argsort(residuals)]
+fig, ax = plt.subplots()
+ax.imshow(img)
+cmap = ax.scatter((X_test[:,0]+120)*70+354,
+                  -(X_test[:,1]-38)*70+312, c=filtsorted,
+            cmap='jet', marker='.', s=10, alpha=1)
+fig.colorbar(cmap, ax=ax, label=df.columns[8])
