@@ -147,16 +147,16 @@ scaler_X = StandardScaler()
 scaler_y = StandardScaler()
 
 X_train, X_test, y_train, y_test = train_test_split(
-    XX, yy, test_size=0.6)
+    XX, yy, test_size=0.8)
 X_train_scaled = scaler_X.fit_transform(X_train)
 y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
 X_test_scaled = scaler_X.transform(X_test)
 
 # model = Ridge(alpha=0.01)
 # model = LinearRegression()
-# model = ElasticNet()
+model = ElasticNet()
 # model = DecisionTreeRegressor()
-model = RandomForestRegressor()
+# model = RandomForestRegressor()
 # model = GradientBoostingRegressor()
 
 kernel = C(1.0, (1e-3, 1e3)) * RBF([1.0]*dimtrain, (1e-2, 1e2)) + \
@@ -257,11 +257,66 @@ fig.colorbar(cmap, ax=ax, label=df.columns[8])
 # %%
 
 
-filtsorted = residuals[np.argsort(residuals)]
+filtsorted = np.abs(residuals[np.argsort(np.abs(residuals))])
 fig, ax = plt.subplots()
 ax.imshow(img)
 cmap = ax.scatter((X_test[:,0]+120)*70+354,
                   -(X_test[:,1]-38)*70+312, c=filtsorted,
             cmap='jet', marker='.', s=10, alpha=1)
 fig.colorbar(cmap, ax=ax, label=df.columns[8])
-# %%
+# # %%
+
+# # TEST BI
+
+# from itertools import chain
+
+# from pyBI.base import UnifVar, InvGaussVar, ObsVar
+# from pyBI.base import HGP, GaussLike
+# from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
+
+
+# Ndim = 9
+# sinvg = [0.2, -0.1, 100000]
+
+# sm = [10]*Ndim
+# smexp = 10
+# covProp = np.eye(Ndim)*1e-1
+# LLTprop = np.linalg.cholesky(covProp)
+
+# rndUs = [UnifVar([-30000,30000]),
+#     UnifVar([-30000,0]), UnifVar([-30000,0]),
+#          UnifVar([-2000,2000]),
+#          UnifVar([-2000,2000]),
+#          UnifVar([-2000,2000]),
+#          UnifVar([-20,20]),
+#          UnifVar([-30000,20000]),
+#          UnifVar([0,50000])
+# ]
+# def modelfit(x,b):
+#     return np.atleast_2d(b[0] + \
+#                          b[1]*x[:,1] +
+#                          b[2]*x[:,2] +
+#                          b[3]*x[:,3] +
+#                          b[4]*x[:,4] +
+#                          b[5]*x[:,5] +
+#                          b[6]*x[:,6] +
+#                          b[7]*x[:,7])[0]
+
+# rnds = InvGaussVar(param=sinvg)
+# obsvar = ObsVar(obs=np.r_[y_train], prev_model=modelfit, cond_var=X_train)
+
+# bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
+#                     [float(rnds.draw())])
+
+# NMCMC = 20000
+# Nburn = 5000
+# verbose = True
+
+# MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+#                     verbose=verbose)
+
+# MCalgo.initialize(obsvar, rndUs, rnds)
+# MCalgo.MCchain[0] = bstart
+# MCalgo.state(0, set_state=True)
+# MCout, llout = MCalgo.runInference()
+
