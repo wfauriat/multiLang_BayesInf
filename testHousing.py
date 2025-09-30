@@ -300,12 +300,14 @@ from pyBI.base import HGP, GaussLike
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
 
 
-Ndim = 8
-sinvg = [0.2, -0.1, 100000]
+Ndim = 8 + 1
+# sinvg = [0.2, -0.1, 100000]
+sinvg = [0.1, 10000, 1000000]
 
-sm = [10]*Ndim
-smexp = 10
-covProp = np.eye(Ndim)*1e0
+# sm = [100]*Ndim
+sm = [1000, 100, 100, 10, 10, 10, 1, 10, 10]
+smexp = 0.1
+covProp = np.eye(Ndim)*1e-1
 LLTprop = np.linalg.cholesky(covProp)
 
 # rndUs = [UnifVar([-30000,30000]),
@@ -317,25 +319,36 @@ LLTprop = np.linalg.cholesky(covProp)
 #          UnifVar([-30000,20000]),
 #          UnifVar([0,50000])
 # ]
+# rndUs = [UnifVar([-50000,50000]),
+#          UnifVar([-50000,50000]),
+#          UnifVar([-20000,20000]),
+#          UnifVar([-20000,20000]),
+#          UnifVar([-20000,20000]),
+#          UnifVar([-200,200]),
+#          UnifVar([-30000,30000]),
+#          UnifVar([-50000,50000])
+# ]
 rndUs = [UnifVar([-50000,50000]),
          UnifVar([-50000,50000]),
-         UnifVar([-20000,20000]),
-         UnifVar([-20000,20000]),
-         UnifVar([-20000,20000]),
+         UnifVar([-50000,50000]),
+         UnifVar([-50000,50000]),
+         UnifVar([-50000,50000]),
+         UnifVar([-50000,50000]),
          UnifVar([-200,200]),
-         UnifVar([-30000,30000]),
+         UnifVar([-10000,10000]),
          UnifVar([-50000,50000])
 ]
 
 def modelfit(x,b):
     return np.atleast_2d(b[0] + \
-                         b[1]*x[:,1] +
-                         b[2]*x[:,2] +
-                         b[3]*x[:,3] +
-                         b[4]*x[:,4] +
-                         b[5]*x[:,5] +
-                         b[6]*x[:,6] +
-                         b[7]*x[:,7])[0][0]
+                         b[1]*x[:,0] +
+                         b[2]*x[:,1] +
+                         b[3]*x[:,2] +
+                         b[4]*x[:,3] +
+                         b[5]*x[:,4] +
+                         b[6]*x[:,5] +
+                         b[7]*x[:,6] + 
+                         b[8]*x[:,7])[0][0]
 
 rnds = InvGaussVar(param=sinvg)
 
@@ -348,7 +361,9 @@ NMCMC = 20000
 Nburn = 5000
 verbose = True
 
-MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+# MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
+#                     verbose=verbose)
+MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
                     verbose=verbose)
 
 
@@ -356,10 +371,20 @@ tmp = obsvar.loglike(bstart[:Ndim],
                      rnds.diagSmat(s=bstart[Ndim],
                                 N=obsvar.dimdata))
 MCalgo.initialize(obsvar, rndUs, rnds)
-MCalgo.sdisc = 10
+MCalgo.sdisc = smexp
+MCalgo.svar = sm
 MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()
 
 
 # %%
+
+#%%############################################################################
+# VISUALISATION OF INFERENCE RESULTS
+###############################################################################
+
+MCalgo.post_visupar()
+MCalgo.hist_alldim()
+
+print(MCalgo)
