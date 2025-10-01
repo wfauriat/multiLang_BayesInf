@@ -142,7 +142,7 @@ scaler_X = StandardScaler()
 scaler_y = StandardScaler()
 
 X_train, X_test, y_train, y_test = train_test_split(
-    XX, yy, test_size=0.95)
+    XX, yy, test_size=0.90)
 
 X_lat_test = X_test[:,:2]
 # X_train = X_train[:,2:] # to remove learning on latitude / longitude
@@ -328,15 +328,15 @@ LLTprop = np.linalg.cholesky(covProp)
 #          UnifVar([-30000,30000]),
 #          UnifVar([-50000,50000])
 # ]
-rndUs = [UnifVar([-50000,50000]),
-         UnifVar([-50000,50000]),
-         UnifVar([-50000,50000]),
-         UnifVar([-50000,50000]),
-         UnifVar([-50000,50000]),
-         UnifVar([-50000,50000]),
-         UnifVar([-200,200]),
-         UnifVar([-10000,10000]),
-         UnifVar([-50000,50000])
+rndUs = [UnifVar([-3000,3000]),
+         UnifVar([-3000,3000]),
+         UnifVar([-5000,5000]),
+         UnifVar([500,2000]),
+         UnifVar([1000,5000]),
+         UnifVar([-2000,2000]),
+         UnifVar([-3,10]),
+         UnifVar([-7000,-3000]),
+         UnifVar([9000,13000])
 ]
 
 def modelfit(x,b):
@@ -350,7 +350,7 @@ def modelfit(x,b):
                          b[7]*x[:,6] + 
                          b[8]*x[:,7])[0][0]
 
-rnds = InvGaussVar(param=sinvg)
+rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
 
 bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
                     [float(rnds.draw())])
