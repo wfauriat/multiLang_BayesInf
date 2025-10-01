@@ -96,7 +96,7 @@ with pm.Model() as linear_model:
 with linear_model:
     # Run the No-U-Turn Sampler (NUTS)
     idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
-    # idata = pm.sample(draws=20000, tune=5000, step=pm.Metropolis())
+    # idata = pm.sample(draws=30000, tune=5000, step=pm.Metropolis())
 
 print("\n--- Model Summary ---")
 pm.summary(idata)
@@ -108,6 +108,8 @@ pm.summary(idata)
 import arviz as az
 
 az.plot_trace(idata)
+
+#%%
 
 log_posterior = idata.sample_stats["lp"].values
 flat_lp = log_posterior.flatten()
@@ -166,7 +168,9 @@ cbar = ax.scatter((X_test[idsort,0]+120)*70+354,
 fig.colorbar(cbar, ax=ax)
 
 
-#%%
+#%%###########################################################################
+## COMPUTE AND (APPROX) UNCERTAINTY IN PREDICTIONS (MAP + ERROR MAGNITUDE)
+##############################################################################
 
 smag = np.std(np.abs(sst.norm(loc=0, scale=map_params['sigma']).rvs(5000)))
 
@@ -176,3 +180,43 @@ ax.plot(X_test[idsort,-1], y_test[idsort], 'or')
 ax.plot(X_test[idsort,-1], ypred[idsort], '.b')
 ax.plot(X_test[idsort,-1], ypred[idsort] + 2*smag, '+--b')
 ax.plot(X_test[idsort,-1], ypred[idsort] - 2*smag, '+--b')
+
+
+#%%###########################################################################
+## COMPUTE AND UNCERTAINTY FROM FULL POSTERIOR
+##############################################################################
+
+postpar = np.hstack([
+    idata.posterior.sel(chain=0)['intercept'].values[None,:].T,
+    idata.posterior.sel(chain=0)['weights'].values,
+    idata.posterior.sel(chain=0)['sigma'].values[None,:].T
+])
+
+def predy(x,b):
+    return b[0] + np.sum(b[1:9]*x)
+
+xtry = X_test[:100,:]
+postY = np.array([[predy(xx, bb) for bb in postpar] for xx in xtry]).T
+postYeps = postY + \
+            sst.norm(loc=0, scale=postpar[:,-1]).rvs(size=(100,2000)).T
+
+fig, ax = plt.subplots()
+ax.plot(xtry[:,-1], postYeps.T, '.b')
+ax.plot(xtry[:,-1], postY.T, '.k')
+ax.plot(xtry[:,-1], y_test[:100] ,'or')
+
+
+#%%###########################################################################
+## MANUAL MAP
+##############################################################################
+manuMAP = {}
+manuMAP['intercept'] = np.array([-333.1999960686905])
+manuMAP['weights'] = np.array([-2069.93974,-4032.20164,1171.66251,
+                                3856.20045, -137.02971, 1.4767,
+                                -3553.31995, 15159.43436])
+manuMAP['sigma'] = np.array(79482.6208348724)
+
+yMAP = manuMAP['intercept'] + X_test @ manuMAP['weights']
+ 
+
+
