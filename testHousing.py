@@ -388,3 +388,22 @@ MCalgo.post_visupar()
 MCalgo.hist_alldim()
 
 print(MCalgo)
+
+#%%############################################################################
+# PROPAGATION OF POSTERIOR IN MODEL
+###############################################################################
+
+postpar = MCalgo.MCchain
+
+def predy(x,b):
+    return b[0] + np.sum(b[1:9]*x)
+
+xtry = X_test[:100,:]
+postY = np.array([[predy(xx, bb) for bb in postpar[:5000:10]] for xx in xtry]).T
+
+fig, ax = plt.subplots()
+# ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
+ax.plot(xtry[:,-1], postY.T, '.k')
+ax.plot(xtry[:,-1], y_test[:100] ,'or')
+
+# %%

@@ -109,19 +109,21 @@ import arviz as az
 
 az.plot_trace(idata)
 
-#%%
+#%%###########################################################################
+## MAP (WITH PYMC NUTS)
+##############################################################################
 
-log_posterior = idata.sample_stats["lp"].values
-flat_lp = log_posterior.flatten()
-map_index_flat = np.argmax(flat_lp)
+# log_posterior = idata.sample_stats["lp"].values
+# flat_lp = log_posterior.flatten()
+# map_index_flat = np.argmax(flat_lp)
 
-map_params = {}
-for var_name, var_data in idata.posterior.items():
-    flat_data = var_data.values.reshape(-1, *var_data.shape[2:])
-    map_value = flat_data[map_index_flat]
-    map_params[var_name] = map_value
+# map_params = {}
+# for var_name, var_data in idata.posterior.items():
+#     flat_data = var_data.values.reshape(-1, *var_data.shape[2:])
+#     map_value = flat_data[map_index_flat]
+#     map_params[var_name] = map_value
 
-print(*[str(el) + '\n' for el in map_params.values()])
+# print(*[str(el) + '\n' for el in map_params.values()])
 
 # #%%
 # trace0 = idata.posterior.data_vars['weights'].sel(chain=0)
@@ -141,45 +143,30 @@ trace0 = idata.posterior.sel(chain=0)['weights']
 trace1 = idata.posterior.sel(chain=1)['weights']
 trace2 = idata.posterior.sel(chain=2)['weights']
 trace3 = idata.posterior.sel(chain=3)['weights']
+interp0 = idata.posterior.sel(chain=0)['intercept']
+sig0 = idata.posterior.sel(chain=0)['sigma']
 
 vdim = 7
-fig, ax = plt.subplots()
-ax.plot(trace0[:,vdim])
-ax.plot(trace1[:,vdim])
-ax.plot(trace2[:,vdim])
-ax.plot(trace3[:,vdim])
+# fig, ax = plt.subplots()
+# ax.plot(trace0[:,vdim])
+# ax.plot(trace1[:,vdim])
+# ax.plot(trace2[:,vdim])
+# ax.plot(trace3[:,vdim])
 
-
-#%%###########################################################################
-## COMPUTE AND VISUALIZE PREDICTIONS
-##############################################################################
-
-ypred = map_params['intercept'] + X_test @ map_params['weights']
-
-
-fig, ax = plt.subplots()
-ax.imshow(img)
-
-idsort = np.argsort(ypred)
-cbar = ax.scatter((X_test[idsort,0]+120)*70+354,
-                 -(X_test[idsort,1]-38)*70+312,
-                  c=ypred[idsort],
-                   marker='.', cmap='jet', s=10, vmin=0, vmax=500000)
-fig.colorbar(cbar, ax=ax)
 
 
 #%%###########################################################################
 ## COMPUTE AND (APPROX) UNCERTAINTY IN PREDICTIONS (MAP + ERROR MAGNITUDE)
 ##############################################################################
 
-smag = np.std(np.abs(sst.norm(loc=0, scale=map_params['sigma']).rvs(5000)))
+# smag = np.std(np.abs(sst.norm(loc=0, scale=map_params['sigma']).rvs(5000)))
 
-idsort = np.argsort(X_test[:100,-1])
-fig, ax = plt.subplots()
-ax.plot(X_test[idsort,-1], y_test[idsort], 'or')
-ax.plot(X_test[idsort,-1], ypred[idsort], '.b')
-ax.plot(X_test[idsort,-1], ypred[idsort] + 2*smag, '+--b')
-ax.plot(X_test[idsort,-1], ypred[idsort] - 2*smag, '+--b')
+# idsort = np.argsort(X_test[:100,-1])
+# fig, ax = plt.subplots()
+# ax.plot(X_test[idsort,-1], y_test[idsort], 'or')
+# ax.plot(X_test[idsort,-1], ypred[idsort], '.b')
+# ax.plot(X_test[idsort,-1], ypred[idsort] + 2*smag, '+--b')
+# ax.plot(X_test[idsort,-1], ypred[idsort] - 2*smag, '+--b')
 
 
 #%%###########################################################################
@@ -192,31 +179,85 @@ postpar = np.hstack([
     idata.posterior.sel(chain=0)['sigma'].values[None,:].T
 ])
 
+# postLL = idata.sample_stats["lp"].sel(chain=0).values
+
 def predy(x,b):
     return b[0] + np.sum(b[1:9]*x)
 
 xtry = X_test[:100,:]
-postY = np.array([[predy(xx, bb) for bb in postpar] for xx in xtry]).T
+postY = np.array([[predy(xx, bb) for bb in postpar[:200]] for xx in xtry]).T
 postYeps = postY + \
-            sst.norm(loc=0, scale=postpar[:,-1]).rvs(size=(100,2000)).T
+            sst.norm(loc=0, scale=postpar[:200,-1]).rvs(
+                size=(100,200)).T
 
 fig, ax = plt.subplots()
-ax.plot(xtry[:,-1], postYeps.T, '.b')
+ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
 ax.plot(xtry[:,-1], postY.T, '.k')
 ax.plot(xtry[:,-1], y_test[:100] ,'or')
 
 
 #%%###########################################################################
-## MANUAL MAP
+## COMPUTE AND VISUALIZE PREDICTIONS
 ##############################################################################
-manuMAP = {}
-manuMAP['intercept'] = np.array([-333.1999960686905])
-manuMAP['weights'] = np.array([-2069.93974,-4032.20164,1171.66251,
-                                3856.20045, -137.02971, 1.4767,
-                                -3553.31995, 15159.43436])
-manuMAP['sigma'] = np.array(79482.6208348724)
 
-yMAP = manuMAP['intercept'] + X_test @ manuMAP['weights']
+# with NUTS
+# ypred = map_params['intercept'] + X_test @ map_params['weights']
+
+# with metropolis
+pt1 = np.random.randint(1000)
+ypred = np.array([predy(xx, postpar[pt1]) for xx in X_test])
+
+fig, ax = plt.subplots()
+ax.imshow(img)
+
+idsort = np.argsort(ypred)
+cbar = ax.scatter((X_test[idsort,0]+120)*70+354,
+                 -(X_test[idsort,1]-38)*70+312,
+                  c=ypred[idsort],
+                   marker='.', cmap='jet', s=10, vmin=0, vmax=500000)
+fig.colorbar(cbar, ax=ax)
+
+
+#%%
+
+fig, ax = plt.subplots()
+yplot = y_test[:100]
+ax.plot(yplot, postY[:100].T, '.k')
+ax.plot([yplot.min(), yplot.max()], [yplot.min(), yplot.max()], '--k')
+ax.set_xlabel('ytrue')
+ax.set_ylabel('ypred')
+
+#%%
+
+# fig, ax = plt.subplots()
+# ax.scatter(trace0[:,6], trace0[:,7], marker='.')
+
+# df = pd.DataFrame(trace0)
+# sns.pairplot(df)
+
+#%%###########################################################################
+## MANUAL MAP
+# ##############################################################################
+# manuMAP = {}
+# manuMAP['intercept'] = np.array([-333.1999960686905])
+# manuMAP['weights'] = np.array([-2069.93974,-4032.20164,1171.66251,
+#                                 3856.20045, -137.02971, 1.4767,
+#                                 -3553.31995, 15159.43436])
+# manuMAP['sigma'] = np.array(79482.6208348724)
+
+# yMAP = manuMAP['intercept'] + X_test @ manuMAP['weights']
  
 
 
+
+
+#%%###########################################################################
+## OTHER DATASET
+##############################################################################
+# from sklearn.datasets import fetch_openml
+# bdata = fetch_openml(name='boston', version=1, as_frame=True)
+# boston_df = bdata.frame
+
+
+
+# az.data.inference_data.InferenceData
