@@ -2,7 +2,7 @@
 
 from itertools import chain
 
-from pyBI.base import UnifVar, InvGaussVar, ObsVar
+from pyBI.base import UnifVar, InvGaussVar, HalfNormVar, ObsVar
 from pyBI.base import HGP, GaussLike
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
 
@@ -37,8 +37,8 @@ casep = 0
 # casep = 1
 # casep = 2
 
-# inftype = 'MH'
-inftype = 'MHwG'
+inftype = 'MH'
+# inftype = 'MHwG'
 
 #%%############################################################################
 # DEFINITION OF APPLICATION / CALIBRATION CASE
@@ -158,7 +158,8 @@ if casep == 0:
     LLTprop = np.linalg.cholesky(covProp)
 
     rndUs = [UnifVar([pl,ph]) for _ in range(3)]
-    rnds = InvGaussVar(param=sinvg)
+    # rnds = InvGaussVar(param=sinvg)
+    rnds = HalfNormVar(param=0.5)
     obsvar = ObsVar(obs=ymes, prev_model=modelfit, cond_var=xmes)
 
     bstart = np.array([rndUs[i].draw() for i in range(3)] + \
@@ -175,7 +176,8 @@ if casep == 1:
     LLTprop = np.linalg.cholesky(covProp)
 
     rndUs = [UnifVar([0,10]), UnifVar([0,1])]
-    rnds = InvGaussVar(param=sinvg)
+    # rnds = InvGaussVar(param=sinvg)
+    rnds = HalfNormVar(param=0.5)
     obsvar = ObsVar(obs=ymes, prev_model=modelgp, cond_var=XX)
 
     bstart = np.array([rndUs[i].draw() for i in range(2)] + \
@@ -186,7 +188,8 @@ if casep == 2:
     Ndim = 3
     sinvg = [0.2, 0.2, 1]
     rndUs = [UnifVar([0,6]), UnifVar([0,6]), UnifVar([0,6])]
-    rnds = InvGaussVar(param=sinvg)
+    # rnds = InvGaussVar(param=sinvg)
+    rnds = HalfNormVar(param=0.5)
     bstart = np.array([rndUs[i].draw() for i in range(3)] + \
                        [float(rnds.draw())])
     obsvar = ObsVar(obs=yrnd,

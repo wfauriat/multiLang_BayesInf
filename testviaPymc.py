@@ -95,8 +95,8 @@ with pm.Model() as linear_model:
 
 with linear_model:
     # Run the No-U-Turn Sampler (NUTS)
-    idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
-    # idata = pm.sample(draws=30000, tune=5000, step=pm.Metropolis())
+    # idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
+    idata = pm.sample(draws=30000, tune=5000, step=pm.Metropolis())
 
 print("\n--- Model Summary ---")
 pm.summary(idata)
@@ -185,7 +185,7 @@ def predy(x,b):
     return b[0] + np.sum(b[1:9]*x)
 
 xtry = X_test[:100,:]
-postY = np.array([[predy(xx, bb) for bb in postpar[:200]] for xx in xtry]).T
+postY = np.array([[predy(xx, bb) for bb in postpar[:2000:10]] for xx in xtry]).T
 postYeps = postY + \
             sst.norm(loc=0, scale=postpar[:200,-1]).rvs(
                 size=(100,200)).T

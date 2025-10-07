@@ -93,9 +93,6 @@ cmap = ax.scatter((filtsorted[:,0]+120)*70+354,
 fig.colorbar(cmap, ax=ax, label=df.columns[dim])
 
 
-
-
-
 #%%###########################################################################
 ## HISTOGRAMS
 ##############################################################################
@@ -142,7 +139,7 @@ scaler_X = StandardScaler()
 scaler_y = StandardScaler()
 
 X_train, X_test, y_train, y_test = train_test_split(
-    XX, yy, test_size=0.90)
+    XX, yy, test_size=0.9)
 
 X_lat_test = X_test[:,:2]
 # X_train = X_train[:,2:] # to remove learning on latitude / longitude
@@ -210,7 +207,7 @@ mue5, sigmae5 = sst.norm.fit(np.abs(residuals[(y_test>400000)]))
 ##############################################################################
 
 vdim = -1
-nplot = 30
+nplot = 100
 visu_samp = np.random.randint(X_test.shape[0],size=nplot)
 
 fig, ax = plt.subplots(2,2,figsize=(10,7))
@@ -295,20 +292,24 @@ fig.colorbar(cmap, ax=ax, label='abs error')
 
 from itertools import chain
 
-from pyBI.base import UnifVar, InvGaussVar, ObsVar
+from pyBI.base import UnifVar, NormVar, HalfNormVar, InvGaussVar, ObsVar
 from pyBI.base import HGP, GaussLike
 from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
 
+### A FAIRE : VARIABLES GAUSSIENNE ET HALF-GAUSSIENNE
 
 Ndim = 8 + 1
 # sinvg = [0.2, -0.1, 100000]
-sinvg = [0.1, 10000, 1000000]
+# sinvg = [0.1, 10000, 1000000]
 
-# sm = [100]*Ndim
-sm = [1000, 100, 100, 10, 10, 10, 1, 10, 10]
-smexp = 0.1
-covProp = np.eye(Ndim)*1e-1
-LLTprop = np.linalg.cholesky(covProp)
+sm = [100]*Ndim
+# sm = list(np.array([1004.88917, 127.83855, 393.73375, 105.59591, 444.7334 ,
+#                      500.32589,   1.26687, 488.87955, 427.2726])/float(Ndim))
+# sm = [1000, 100, 100, 10, 10, 10, 1, 10, 10]
+# smexp = 738
+smexp = 1000
+# covProp = np.eye(Ndim)*1e-1
+# LLTprop = np.linalg.cholesky(covProp)
 
 # rndUs = [UnifVar([-30000,30000]),
 #          UnifVar([-30000,30000]),
@@ -328,16 +329,23 @@ LLTprop = np.linalg.cholesky(covProp)
 #          UnifVar([-30000,30000]),
 #          UnifVar([-50000,50000])
 # ]
-rndUs = [UnifVar([-3000,3000]),
-         UnifVar([-3000,3000]),
-         UnifVar([-5000,5000]),
-         UnifVar([500,2000]),
-         UnifVar([1000,5000]),
-         UnifVar([-2000,2000]),
-         UnifVar([-3,10]),
-         UnifVar([-7000,-3000]),
-         UnifVar([9000,13000])
-]
+# rndUs = [UnifVar([-3000,3000]),
+#          UnifVar([-3000,3000]),
+#          UnifVar([-5000,5000]),
+#          UnifVar([500,2000]),
+#          UnifVar([1000,5000]),
+#          UnifVar([-2000,2000]),
+#          UnifVar([-3,10]),
+#          UnifVar([-7000,-3000]),
+#          UnifVar([9000,13000])
+# ]
+
+rndUs = [NormVar([0, 1000]), NormVar([0, 500]), NormVar([0, 500]),
+         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500]),
+         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500])]
+
+# rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
+rnds = HalfNormVar(param=2000)
 
 def modelfit(x,b):
     return np.atleast_2d(b[0] + \
@@ -350,10 +358,13 @@ def modelfit(x,b):
                          b[7]*x[:,6] + 
                          b[8]*x[:,7])[0][0]
 
-rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
-
 bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
                     [float(rnds.draw())])
+# bstart[-1] = 110000
+
+# bstart = np.array([36.52702, -1961.62422, -3688.57167,
+#                      1261.74547,  3532.65053,  -167.66288,
+#            0.78829, -3416.72979, 15082.10336, 80000])
 
 obsvar = ObsVar(obs=np.c_[y_train], prev_model=modelfit, cond_var=X_train)
 
@@ -365,11 +376,13 @@ verbose = True
 #                     verbose=verbose)
 MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
                     verbose=verbose)
-
+# MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=False,
+#                     verbose=verbose)
 
 tmp = obsvar.loglike(bstart[:Ndim],
                      rnds.diagSmat(s=bstart[Ndim],
                                 N=obsvar.dimdata))
+
 MCalgo.initialize(obsvar, rndUs, rnds)
 MCalgo.sdisc = smexp
 MCalgo.svar = sm
@@ -377,8 +390,6 @@ MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()
 
-
-# %%
 
 #%%############################################################################
 # VISUALISATION OF INFERENCE RESULTS
@@ -393,17 +404,24 @@ print(MCalgo)
 # PROPAGATION OF POSTERIOR IN MODEL
 ###############################################################################
 
+manuMAP  = np.array([36.52702, -1961.62422, -3688.57167,
+                     1261.74547,  3532.65053,  -167.66288,
+           0.78829, -3416.72979, 15082.10336, 80000])
+
+
 postpar = MCalgo.MCchain
 
 def predy(x,b):
     return b[0] + np.sum(b[1:9]*x)
 
 xtry = X_test[:100,:]
-postY = np.array([[predy(xx, bb) for bb in postpar[:5000:10]] for xx in xtry]).T
+postY = np.array([[predy(xx, bb) for bb in postpar[5000::20]] for xx in xtry]).T
+yMAP = np.array([predy(xx, manuMAP) for xx in xtry]).T
 
 fig, ax = plt.subplots()
 # ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
 ax.plot(xtry[:,-1], postY.T, '.k')
 ax.plot(xtry[:,-1], y_test[:100] ,'or')
+ax.plot(xtry[:,-1], yMAP, '+b')
 
 # %%

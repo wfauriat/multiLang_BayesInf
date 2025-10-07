@@ -42,6 +42,45 @@ class UnifVar(RandVar):
         return np.random.rand()*(self.param[1] - self.param[0]) + self.param[0]
 
 
+class NormVar(RandVar):
+    def __init__(self, param=None):
+        super().__init__(param)
+        self.min = self.param[0] - 6*self.param[1]
+        self.max = self.param[1] + 6*self.param[1]
+
+    def logprior(self, x):
+        logcst = -0.5 * np.log(2 * np.pi * self.param[1]**2)
+        logp = -0.5 * ((x - self.param[0]) / self.param[1])**2 + logcst
+        return logp
+    
+    def proposal(self, m=0, s=1):
+        return np.random.randn()*np.array(s)+m
+    
+    def draw(self):
+        return np.random.randn()*self.param[1] + self.param[0]
+    
+class HalfNormVar(RandVar):
+    def __init__(self, param=None):
+        super().__init__(param)
+        self.min = 0
+        self.max = 6*self.param
+
+    def logprior(self, x):
+        logcst = 0.5 * np.log(2) - 0.5 * np.log(np.pi) - np.log(self.param)
+        logp = -(x**2) / (2 * self.param**2) + logcst if x > 0 else -np.inf
+        return logp
+    
+    def proposal(self, m=0, s=1):
+        return np.random.randn()*np.array(s)+m
+    
+    def draw(self):
+        return np.abs(np.random.randn() * self.param)
+    
+    def diagSmat(self, s=None, N=1):
+        s0 = self.param if s is None else s
+        return np.eye(N)*s0**2
+
+
 class InvGaussVar(RandVar):
     def __init__(self, param=None):
         super().__init__(param)

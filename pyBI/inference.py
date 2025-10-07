@@ -376,7 +376,8 @@ class InfAlgo:
         self.svar = svar*np.ones(self.Ndim) if isinstance(svar,(int,float)) \
             else svar
         if sdisc is not None: self.sdisc = sdisc
-        else: self.sdisc = discrObj.param[0]*discrObj.param[2]*0.5
+        # else: self.sdisc = discrObj.param[0]*discrObj.param[2]*0.5
+        else: self.sdisc = discrObj.param
         if isinstance(Lblock,(int,float)):
             self.Lblock = np.eye(self.Ndim)
         elif Lblock is None:
@@ -588,12 +589,16 @@ class MHalgo(InfAlgo):
                 self.log_state = llprop
                 self.prior_state = lpprop
             else: self.stay(i)
-            if (i%1000 == 0) & (self.verbose) : print(i)
+            if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
+                print('Burn-in : ' + str(i))
+            if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
+                print('Chain : ' + str(i - self.Nburn))
             if (i%500 == 0) & (i<=self.Nburn) & (self.is_adaptive):
                 covProp = np.cov(self.MCchain[i-500:i,:self.Ndim].T) 
                 LLTprop = np.linalg.cholesky(covProp * 2.38**2/(self.Ndim-1) +
                                             np.eye(self.Ndim)*1e-8)
                 self.Lblock = LLTprop
+                self.sdisc = np.std(self.MCchain[i-500:i,self.Ndim])
         MCS = self.thin_and_sort()
         self.tacc = self.nacc/(self.N - self.Nburn)
         if self.verbose: print('acceptation rate', self.tacc)
@@ -660,11 +665,14 @@ class MHwGalgo(InfAlgo):
                     self.log_state = llprop
                     self.prior_state = lpprop
                 else: self.stay(i,idx)
-            if (i%1000 == 0) & (self.verbose): print(i)
+            if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
+                print('Burn-in : ' + str(i))
+            if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
+                print('Chain : ' + str(i - self.Nburn))
             if (i%500 == 0) & (i<=self.Nburn) & (self.is_adaptive):
                 for idx in id_rnd:
                     if idx != self.Ndim:
-                        self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*1
+                        self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*0.3
                 self.Lblock = np.diag(self.svar) 
         MCS = self.thin_and_sort()
         self.tacc = self.nacc/(self.N - self.Nburn)
