@@ -2,9 +2,9 @@
 
 from itertools import chain
 
-from pyBI.base import UnifVar, InvGaussVar, HalfNormVar, ObsVar
+from pyBI.base import UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar
 from pyBI.base import HGP, GaussLike
-from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
+from pyBI.inference import MHalgo, MHwGalgo, MHwGalgo2
 
 
 import numpy as np
@@ -53,8 +53,8 @@ if casep == 0:
         return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
 
     b0 = [2, -1, 2, 0]
-    nslvl = 0.2
-    nsp1 = 0.1
+    nslvl = 0.1
+    nsp1 = 0.2
     biasp1 = -1
 
     xplot = np.repeat(np.c_[np.linspace(0,6,50)],2, axis=1)
@@ -150,14 +150,16 @@ if casep == 0:
     Ndim = 3
     pl = -5
     ph = 5
-    sinvg = [0.2, -0.1, 2]
-
-    sm = [0.4, 0.4, 0.05]
-    smexp = 0.1
+    # sinvg = [0.2, -0.1, 2]
+    # sexp = [0.4, 0.4, 0.05]
+    # sdexp = 0.1
+    sexp = [0.1, 0.1, 0.1]
+    sdexp = 0.1
     covProp = np.eye(3)*1e-1
     LLTprop = np.linalg.cholesky(covProp)
 
     rndUs = [UnifVar([pl,ph]) for _ in range(3)]
+    # rndUs = [NormVar([0, 1]) for _ in range(3)]
     # rnds = InvGaussVar(param=sinvg)
     rnds = HalfNormVar(param=0.5)
     obsvar = ObsVar(obs=ymes, prev_model=modelfit, cond_var=xmes)
@@ -170,8 +172,8 @@ if casep == 1:
     Ndim = 2
     sinvg = [0.4, 0, 2]
 
-    sm = [0.2, 5e-2]
-    smexp = 0.2
+    sexp = [0.2, 5e-2]
+    sdexp = 0.2
     covProp = np.array([[0.2,0],[0,0.05]])
     LLTprop = np.linalg.cholesky(covProp)
 
@@ -187,6 +189,8 @@ if casep == 1:
 if casep == 2:
     Ndim = 3
     sinvg = [0.2, 0.2, 1]
+    sexp = [0.1, 0.1, 0.1]
+    sdexp = 0.1
     rndUs = [UnifVar([0,6]), UnifVar([0,6]), UnifVar([0,6])]
     # rnds = InvGaussVar(param=sinvg)
     rnds = HalfNormVar(param=0.5)
@@ -201,8 +205,12 @@ if casep == 2:
 ###############################################################################
 
 NMCMC = 20000
-Nburn = 5000
+Nburn = 10000
 verbose = True
+
+inftype = 'MHwG'
+bstart = np.array([rndUs[i].draw() for i in range(3)] + \
+                    [float(rnds.draw())])
 
 if inftype == 'MH':
     MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
@@ -210,8 +218,8 @@ if inftype == 'MH':
 if inftype == 'MHwG':
     MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
                        verbose=verbose)
-# MCalgo.initialize(obsvar, rndUs, rnds, svar=sm, sdisc=smexp)
-MCalgo.initialize(obsvar, rndUs, rnds)
+# MCalgo.initialize(obsvar, rndUs, rnds, svar=sexp, sdisc=sdexp)
+MCalgo.initialize(obsvar, rndUs, rnds, svar=1)
 MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()
@@ -223,6 +231,8 @@ MCout, llout = MCalgo.runInference()
 
 MCalgo.post_visupar()
 MCalgo.hist_alldim()
+MCalgo.diag_chain(0, show_prior=False)
+MCalgo.diag_chain(3, show_prior=False)
 
 print(MCalgo)
 

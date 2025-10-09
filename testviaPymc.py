@@ -52,7 +52,7 @@ XX = arrdata[:,:dim]
 yy = arrdata[:,-1]
 
 X_train, X_test, y_train, y_test = train_test_split(
-    XX, yy, test_size=0.8)
+    XX, yy, test_size=0.95, random_state=42)
 
 scaler_X = StandardScaler()
 scaler_y = StandardScaler()
@@ -91,15 +91,56 @@ with pm.Model() as linear_model:
     mu = pt.dot(X_train, weights) + intercept
     # mu = pm.Deterministic("mu", intercept + pt.dot(XX, weights)) # other formulation
     likelihood = pm.Normal("likelihood", mu=mu, sigma=sigma, observed=y_train)
+    # likelihood = pm.MvNormal("likelihood", mu=mu, cov=sigma*pt.eye(y_train.shape[0]),
+    #                           observed=y_train)
 
 
 with linear_model:
     # Run the No-U-Turn Sampler (NUTS)
     # idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
-    idata = pm.sample(draws=30000, tune=5000, step=pm.Metropolis())
+    idata = pm.sample(draws=30000, tune=5000,
+                       step=pm.Metropolis(tune_interval=500))
 
 print("\n--- Model Summary ---")
 pm.summary(idata)
+
+
+#%%
+
+with linear_model:
+    pm.compute_log_likelihood(idata)
+
+pointwise_ll = idata.log_likelihood["likelihood"]
+ll_sum = pointwise_ll.sum(dim=pointwise_ll.dims[2:])
+ll_flat = ll_sum.values.flatten()
+ll_flat_max_idx = np.argmax(ll_flat)
+ll_n_draws = len(ll_sum.draw)
+ll_best_chain = ll_flat_max_idx // ll_n_draws
+ll_best_draw = ll_flat_max_idx % ll_n_draws
+max_ll_value = ll_flat[ll_flat_max_idx]
+MAPw = idata.posterior.sel(chain=ll_best_chain)["weights"][ll_best_draw]
+MAPi = idata.posterior.sel(chain=ll_best_chain)["intercept"][ll_best_draw]
+MAPs = idata.posterior.sel(chain=ll_best_chain)["sigma"][ll_best_draw]
+
+print(f"Maximum Total Log-Likelihood (MLE): {max_ll_value:.4f}")
+print(f"Sample Location: Chain {ll_best_chain}, Draw {ll_best_draw}")
+print(f"MAP weights: {MAPw.values}")
+print(f"MAP intercept: {MAPi.values}")
+print(f"MAP sigma: {MAPs.values}")
+
+
+#%%
+
+test_values = {
+    "intercept": MAPi.values,
+    "weights": MAPw.values,
+    "sigma_log__": np.log(MAPs.values)
+}
+
+log_likelihood_fn = linear_model.compile_logp(vars=[linear_model.likelihood])
+total_log_likelihood = log_likelihood_fn(test_values).item()
+
+print(f"Total Log-Likelihood (Log P(y|theta)): {total_log_likelihood:.4f}")
 
 #%%###########################################################################
 ## PLOT INFERENCE RESULTS AND GIVE MAP
@@ -108,6 +149,7 @@ pm.summary(idata)
 import arviz as az
 
 az.plot_trace(idata)
+
 
 #%%###########################################################################
 ## MAP (WITH PYMC NUTS)

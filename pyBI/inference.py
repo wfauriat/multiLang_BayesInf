@@ -311,7 +311,7 @@ class InfAlgo:
 
         """
         self.Nburn: int = int(N*0.1) if Nburn == 0.1 else Nburn
-        self.Nthin: int = Nthin
+        self.Nthin: int = Nthin if Nthin else 1
         self.N: int = N + self.Nburn
         self.log_state: float = 0.
         self.prior_state: float = 0.
@@ -338,7 +338,7 @@ class InfAlgo:
     #     return "see __init__()"
 
     def initialize(self, obsObj: ObsVar, varObj: RandVar, discrObj: RandVar,
-                    svar: float = 1., sdisc: Optional[float] = None,
+                    svar: float = 1., sdisc: float = 1.,
                     Lblock: Optional[np.ndarray] = None):
         """
         Definition of the necessary objects to instantiate the inference 
@@ -375,6 +375,7 @@ class InfAlgo:
         self.llchain = np.zeros(self.N)
         self.svar = svar*np.ones(self.Ndim) if isinstance(svar,(int,float)) \
             else svar
+        self.sdisc = sdisc if sdisc else 1.
         if sdisc is not None: self.sdisc = sdisc
         # else: self.sdisc = discrObj.param[0]*discrObj.param[2]*0.5
         else: self.sdisc = discrObj.param
@@ -393,10 +394,12 @@ class InfAlgo:
         Evaluation of current step:
         Computation of log-likelihood given current state
         Computation of log-prior of current state
-        """
-        log_state = self.obsObj.loglike(self.MCchain[i,:self.Ndim], 
-                        self.discrObj.diagSmat(s=self.MCchain[i,self.Ndim],
-                                       N=self.obsObj.dimdata))
+        # """
+        # log_state = self.obsObj.loglike(self.MCchain[i,:self.Ndim], 
+        #                 self.discrObj.diagSmat(s=self.MCchain[i,self.Ndim],
+        #                                N=self.obsObj.dimdata))
+        log_state = self.obsObj.loglike_uv(self.MCchain[i,:self.Ndim],
+                                        self.MCchain[i,self.Ndim])
         prior_state = np.sum([self.varObj[k].logprior(self.MCchain[i,k]) 
                               for k in range(len(self.varObj))]) + \
                               self.discrObj.logprior(self.MCchain[i,self.Ndim])
@@ -531,6 +534,7 @@ class InfAlgo:
             fig, ax = subplots(2,1)
             ax[0].plot(self.raw_chain[:(1*Nc*self.Nthin + self.Nburn),di],
                                     '-k', lw=0.5)
+            ax[0].axvline(x=self.Nburn, ls='--', color='r')
             ax[1].hist(self.idx_chain[:,di], edgecolor='b', alpha=0.4)
             axx = ax[1].twinx()
             ax[1].set_xlabel(labels[di])
@@ -572,38 +576,84 @@ class MHalgo(InfAlgo):
     """
     Subclass for instanciating a standard Metropolis Hasting inference 
     """
-    def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
+    def __init__(self, N, Nthin=1, Nburn=0.1, is_adaptive=True,
                  verbose=True):
         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
 
     def runInference(self):
-        self.nacc = 0 
+        self.nacc = np.zeros(2) 
         for i in range(1,self.N):
             prop = self.move_prop(self.MCchain[i-1])
-            self.store(i, prop[:self.Ndim], prop[self.Ndim])
+            self.store(i, prop[:self.Ndim], self.MCchain[i-1,self.Ndim])
             llprop, lpprop = self.state(i)
             ldiff = llprop + lpprop - self.log_state - self.prior_state
             if ldiff > np.log(np.random.rand()):
-                if i>self.Nburn: self.nacc += 1
+                if i>self.Nburn: self.nacc[0] += 1
                 self.llchain[i] = llprop
                 self.log_state = llprop
                 self.prior_state = lpprop
             else: self.stay(i)
+            prop = self.move_prop(self.MCchain[i])
+            self.store(i, self.MCchain[i,:self.Ndim], prop[self.Ndim])
+            llprop, lpprop = self.state(i)
+            ldiff = llprop + lpprop - self.log_state - self.prior_state
+            if ldiff > np.log(np.random.rand()):
+                if i>self.Nburn: self.nacc[1] += 1
+                self.llchain[i] = llprop
+                self.log_state = llprop
+                self.prior_state = lpprop
+            else: self.stay(i,self.Ndim)
             if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
                 print('Burn-in : ' + str(i))
-            if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
-                print('Chain : ' + str(i - self.Nburn))
-            if (i%500 == 0) & (i<=self.Nburn) & (self.is_adaptive):
+            if (i%500 == 0) & (i<self.Nburn) & (self.is_adaptive):
                 covProp = np.cov(self.MCchain[i-500:i,:self.Ndim].T) 
                 LLTprop = np.linalg.cholesky(covProp * 2.38**2/(self.Ndim-1) +
                                             np.eye(self.Ndim)*1e-8)
                 self.Lblock = LLTprop
-                self.sdisc = np.std(self.MCchain[i-500:i,self.Ndim])
+                self.sdisc = np.std(self.MCchain[i-500:i,self.Ndim])*1
+            if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
+                print('Chain : ' + str(i - self.Nburn))
         MCS = self.thin_and_sort()
         self.tacc = self.nacc/(self.N - self.Nburn)
         if self.verbose: print('acceptation rate', self.tacc)
         return MCS[0], MCS[1]
     
+# class MHalgo(InfAlgo):
+#     """
+#     Subclass for instanciating a standard Metropolis Hasting inference 
+#     """
+#     def __init__(self, N, Nthin=1, Nburn=0.1, is_adaptive=True,
+#                  verbose=True):
+#         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
+
+#     def runInference(self):
+#         self.nacc = 0 
+#         for i in range(1,self.N):
+#             prop = self.move_prop(self.MCchain[i-1])
+#             self.store(i, prop[:self.Ndim], prop[self.Ndim])
+#             llprop, lpprop = self.state(i)
+#             ldiff = llprop + lpprop - self.log_state - self.prior_state
+#             if ldiff > np.log(np.random.rand()):
+#                 if i>self.Nburn: self.nacc += 1
+#                 self.llchain[i] = llprop
+#                 self.log_state = llprop
+#                 self.prior_state = lpprop
+#             else: self.stay(i)
+#             if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
+#                 print('Burn-in : ' + str(i))
+#             if (i%200 == 0) & (i<=self.Nburn) & (self.is_adaptive):
+#                 covProp = np.cov(self.MCchain[i-200:i,:self.Ndim].T) 
+#                 LLTprop = np.linalg.cholesky(covProp * 2.38**2/(self.Ndim-1) +
+#                                             np.eye(self.Ndim)*1e-8)
+#                 self.Lblock = LLTprop
+#                 self.sdisc = np.std(self.MCchain[i-200:i,self.Ndim])* 1
+#             if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
+#                 print('Chain : ' + str(i - self.Nburn))
+#         MCS = self.thin_and_sort()
+#         self.tacc = self.nacc/(self.N - self.Nburn)
+#         if self.verbose: print('acceptation rate', self.tacc)
+#         return MCS[0], MCS[1]
+
 
 class MHwGalgo2(InfAlgo2):
     """
@@ -645,12 +695,17 @@ class MHwGalgo(InfAlgo):
     """
     Subclass for instanciating a Metropolis within Gibbs inference
     """
-    def __init__(self, N, Nthin=None, Nburn=0.1, is_adaptive=True,
+    def __init__(self, N, Nthin=1, Nburn=0.1, is_adaptive=True,
                  verbose=False):
         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
+        self.target_acc = 0.3
 
     def runInference(self):
         self.nacc = np.zeros(self.Ndim+1) 
+        interval_acc = np.zeros(self.Ndim + 1)
+        TUNE_INTERVAL = 500
+        ALPHA = 0.7
+        t0 = 100 
         for i in range(1,self.N):
             self.MCchain[i] = self.MCchain[i-1]
             id_rnd = np.random.permutation(self.Ndim+1)
@@ -667,14 +722,65 @@ class MHwGalgo(InfAlgo):
                 else: self.stay(i,idx)
             if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
                 print('Burn-in : ' + str(i))
+            if (i%TUNE_INTERVAL == 0) & (i<self.Nburn) & (self.is_adaptive):
+                t = i // TUNE_INTERVAL 
+                gamma_t = 1.0 / (t + t0)**ALPHA 
+                acc_rate = interval_acc[idx] / TUNE_INTERVAL
+                log_sigma_t = np.log(self.svar[idx] if idx != self.Ndim \
+                                     else self.sdisc)
+                log_sigma_t += gamma_t * (acc_rate - self.target_acc)
+                new_sigma = np.exp(log_sigma_t)
+                if idx != self.Ndim:
+                    self.svar[idx] = new_sigma 
+                else:
+                    self.sdisc = new_sigma
             if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
                 print('Chain : ' + str(i - self.Nburn))
-            if (i%500 == 0) & (i<=self.Nburn) & (self.is_adaptive):
-                for idx in id_rnd:
-                    if idx != self.Ndim:
-                        self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*0.3
-                self.Lblock = np.diag(self.svar) 
+
+
         MCS = self.thin_and_sort()
         self.tacc = self.nacc/(self.N - self.Nburn)
         if self.verbose: print('acceptation rate', self.tacc)
         return MCS[0], MCS[1]
+    
+# class MHwGalgo(InfAlgo):
+#     """
+#     Subclass for instanciating a Metropolis within Gibbs inference
+#     """
+#     def __init__(self, N, Nthin=1, Nburn=0.1, is_adaptive=True,
+#                  verbose=False):
+#         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
+
+#     def runInference(self):
+#         self.nacc = np.zeros(self.Ndim+1) 
+#         for i in range(1,self.N):
+#             self.MCchain[i] = self.MCchain[i-1]
+#             id_rnd = np.random.permutation(self.Ndim+1)
+#             for idx in id_rnd:
+#                 prop = self.move_uni(idx, self.MCchain[i])
+#                 self.store(i, prop[:self.Ndim], prop[self.Ndim])
+#                 llprop, lpprop = self.state(i)
+#                 ldiff = llprop + lpprop - self.log_state - self.prior_state
+#                 if ldiff > np.log(np.random.rand()):
+#                     if i>self.Nburn: self.nacc[idx] += 1
+#                     self.llchain[i] = llprop
+#                     self.log_state = llprop
+#                     self.prior_state = lpprop
+#                 else: self.stay(i,idx)
+#             if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
+#                 print('Burn-in : ' + str(i))
+#             if (i%500 == 0) & (i<self.Nburn) & (self.is_adaptive):
+#                 for idx in id_rnd:
+#                     if idx != self.Ndim:
+#                         self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*2.38**2
+#                     else:
+#                         self.sdisc = np.std(self.MCchain[i-500:i,idx])*1
+#                 self.Lblock = np.diag(self.svar)
+#             if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
+#                 print('Chain : ' + str(i - self.Nburn))
+
+
+#         MCS = self.thin_and_sort()
+#         self.tacc = self.nacc/(self.N - self.Nburn)
+#         if self.verbose: print('acceptation rate', self.tacc)
+#         return MCS[0], MCS[1]

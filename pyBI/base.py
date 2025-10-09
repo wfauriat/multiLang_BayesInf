@@ -143,6 +143,15 @@ class ObsVar():
                     - (N / 2) * log_det_sigma \
                     - (1 / 2) * np.sum(mahalanobis_term)
         return log_likelihood
+    
+    def loglike_uv(self, par, sigma):
+        N = self.obs.shape[0]
+        diff = np.ravel(self.prev_model(self.cond_var,par)) - np.ravel(self.obs)
+        SSE = np.sum(diff**2)
+        log_likelihood = - (N / 2) * np.log(2 * np.pi) \
+                       - N * np.log(sigma) \
+                       - (1 / 2) * SSE / (sigma**2)
+        return log_likelihood
 
 
 
