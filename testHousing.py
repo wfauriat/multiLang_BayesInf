@@ -321,16 +321,16 @@ Ndim = 8 + 1
 #          UnifVar([9000,13000])
 # ]
 
-rndUs = [NormVar([0, 10000]), NormVar([0, 5000]), NormVar([0, 5000]),
-         NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000]),
-         NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000])]
+# rndUs = [NormVar([0, 10000]), NormVar([0, 5000]), NormVar([0, 5000]),
+#          NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000]),
+#          NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000])]
 
-# rndUs = [NormVar([0, 1000]), NormVar([0, 500]), NormVar([0, 500]),
-#          NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500]),
-#          NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500])]
+rndUs = [NormVar([0, 1000]), NormVar([0, 500]), NormVar([0, 500]),
+         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500]),
+         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500])]
 
 # rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
-rnds = HalfNormVar(param=20000)
+rnds = HalfNormVar(param=2000)
 
 def modelfit(x,b):
     return np.atleast_2d(b[0] + \
@@ -341,7 +341,7 @@ def modelfit(x,b):
                          b[5]*x[:,4] +
                          b[6]*x[:,5] +
                          b[7]*x[:,6] + 
-                         b[8]*x[:,7])[0][0]
+                         b[8]*x[:,7])[0]
 
 bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
                     [float(rnds.draw())])
@@ -351,22 +351,22 @@ bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
 #                      1261.74547,  3532.65053,  -167.66288,
 #            0.78829, -3416.72979, 15082.10336, 80000])
 
-bstart = np.array([-896.5297964447237,
-                    -1440.55736, -1052.00614,  1389.29935,
-                    1963.42087,   212.32972,  1.19937,
-                    -1147.10989,  7124.50073, 
-                    72909.60395185255])
+# bstart = np.array([-896.5297964447237,
+#                     -1440.55736, -1052.00614,  1389.29935,
+#                     1963.42087,   212.32972,  1.19937,
+#                     -1147.10989,  7124.50073, 
+#                     72909.60395185255])
 
 obsvar = ObsVar(obs=np.c_[y_train], prev_model=modelfit, cond_var=X_train)
 
 NMCMC = 30000
-Nburn = 30000
+Nburn = 5000
 verbose = True
 
-MCalgo = MHwGalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
-                    verbose=verbose)
-# MCalgo = MHalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
+# MCalgo = MHwGalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
 #                     verbose=verbose)
+MCalgo = MHalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
+                    verbose=verbose)
 # MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=False,
 #                     verbose=verbose)
 
@@ -374,7 +374,10 @@ MCalgo = MHwGalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
 #                      rnds.diagSmat(s=bstart[Ndim],
 #                                 N=obsvar.dimdata))
 
-MCalgo.initialize(obsvar, rndUs, rnds, svar=500, sdisc=500)
+svar = [987.14257, 148.35947, 454.2968 , 174.51169, 480.13822, 499.13329,   2.31371,
+       498.01483, 471.80237]
+
+MCalgo.initialize(obsvar, rndUs, rnds, svar=1, sdisc=1)
 # MCalgo.sdisc = smexp
 # MCalgo.svar = sm
 MCalgo.MCchain[0] = bstart
@@ -402,11 +405,17 @@ print(MCalgo)
 #                      1261.74547,  3532.65053,  -167.66288,
 #            0.78829, -3416.72979, 15000.10336, 80000])
 
-manuMAP = np.array([-896.5297964447237,
-                    -1440.55736, -1052.00614,  1389.29935,
-                    1963.42087,   212.32972,  1.19937,
-                    -1147.10989,  7124.50073, 
-                    72909.60395185255])
+# manuMAP = np.array([-896.5297964447237,
+#                     -1440.55736, -1052.00614,  1389.29935,
+#                     1963.42087,   212.32972,  1.19937,
+#                     -1147.10989,  7124.50073, 
+#                     72909.60395185255])
+
+manuMAP = np.array([-634.8074,
+                    -1487.9415, -1499.58789,  1386.33006,
+                    2926.48012,   -480.5321,  0.69041,
+                    -1510.5298,  7561.6451, 
+                    71378.60979622297])
 
 # manuMAP = np.array([0,-3000,0,0,0,0,30,15000,0]+[80000])
 

@@ -37,8 +37,8 @@ casep = 0
 # casep = 1
 # casep = 2
 
-inftype = 'MH'
-# inftype = 'MHwG'
+# inftype = 'MH'
+inftype = 'MHwG'
 
 #%%############################################################################
 # DEFINITION OF APPLICATION / CALIBRATION CASE
@@ -208,9 +208,9 @@ NMCMC = 20000
 Nburn = 10000
 verbose = True
 
-inftype = 'MHwG'
-bstart = np.array([rndUs[i].draw() for i in range(3)] + \
-                    [float(rnds.draw())])
+# inftype = 'MHwG'
+# bstart = np.array([rndUs[i].draw() for i in range(3)] + \
+#                     [float(rnds.draw())])
 
 if inftype == 'MH':
     MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,

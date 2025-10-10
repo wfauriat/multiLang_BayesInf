@@ -698,14 +698,14 @@ class MHwGalgo(InfAlgo):
     def __init__(self, N, Nthin=1, Nburn=0.1, is_adaptive=True,
                  verbose=False):
         super().__init__(N, Nthin, Nburn, is_adaptive, verbose)
-        self.target_acc = 0.3
+        # self.target_acc = 0.3
 
     def runInference(self):
         self.nacc = np.zeros(self.Ndim+1) 
-        interval_acc = np.zeros(self.Ndim + 1)
+        self.interval_acc = np.zeros(self.Ndim + 1)
         TUNE_INTERVAL = 500
-        ALPHA = 0.7
-        t0 = 100 
+        # ALPHA = 0.9
+        # t0 = 100 
         for i in range(1,self.N):
             self.MCchain[i] = self.MCchain[i-1]
             id_rnd = np.random.permutation(self.Ndim+1)
@@ -716,6 +716,7 @@ class MHwGalgo(InfAlgo):
                 ldiff = llprop + lpprop - self.log_state - self.prior_state
                 if ldiff > np.log(np.random.rand()):
                     if i>self.Nburn: self.nacc[idx] += 1
+                    if i<self.Nburn: self.interval_acc[idx] += 1
                     self.llchain[i] = llprop
                     self.log_state = llprop
                     self.prior_state = lpprop
@@ -723,17 +724,34 @@ class MHwGalgo(InfAlgo):
             if (i%1000 == 0) & (i<=self.Nburn) & (self.verbose):
                 print('Burn-in : ' + str(i))
             if (i%TUNE_INTERVAL == 0) & (i<self.Nburn) & (self.is_adaptive):
-                t = i // TUNE_INTERVAL 
-                gamma_t = 1.0 / (t + t0)**ALPHA 
-                acc_rate = interval_acc[idx] / TUNE_INTERVAL
-                log_sigma_t = np.log(self.svar[idx] if idx != self.Ndim \
-                                     else self.sdisc)
-                log_sigma_t += gamma_t * (acc_rate - self.target_acc)
-                new_sigma = np.exp(log_sigma_t)
-                if idx != self.Ndim:
-                    self.svar[idx] = new_sigma 
-                else:
-                    self.sdisc = new_sigma
+                for idx in range(self.Ndim):
+                    self.svar[idx] = self.tune_scale(self.svar[idx],
+                                                     self.interval_acc[idx], 
+                                                    TUNE_INTERVAL)
+                self.sdisc = self.tune_scale(self.sdisc, 
+                                             self.interval_acc[self.Ndim],
+                                              TUNE_INTERVAL)
+                self.interval_acc = np.zeros(self.Ndim + 1)
+                # OPTION 1 !!!!!!
+                # for idx in id_rnd:
+#                     if idx != self.Ndim:
+#                         self.svar[idx] = np.std(self.MCchain[i-500:i,idx])*2.38**2
+#                     else:
+#                         self.sdisc = np.std(self.MCchain[i-500:i,idx])*1
+#                 self.Lblock = np.diag(self.svar)
+
+                # OPTION 2 !!!!!!
+                # t = i // TUNE_INTERVAL 
+                # gamma_t = 1.0 / (t + t0)**ALPHA 
+                # acc_rate = interval_acc[idx] / TUNE_INTERVAL
+                # log_sigma_t = np.log(self.svar[idx] if idx != self.Ndim \
+                #                      else self.sdisc)
+                # log_sigma_t += gamma_t * (acc_rate - self.target_acc)
+                # new_sigma = np.exp(log_sigma_t)
+                # if idx != self.Ndim:
+                #     self.svar[idx] = new_sigma 
+                # else:
+                #     self.sdisc = new_sigma
             if (i%1000 == 0) & (i>=self.Nburn) & (self.verbose):
                 print('Chain : ' + str(i - self.Nburn))
 
@@ -742,6 +760,24 @@ class MHwGalgo(InfAlgo):
         self.tacc = self.nacc/(self.N - self.Nburn)
         if self.verbose: print('acceptation rate', self.tacc)
         return MCS[0], MCS[1]
+    
+    def tune_scale(self, sin, nacc, interv):
+        sout = sin * 1 # if between 0.2 and 0.5
+        if nacc / interv < 0.2:
+            sout = sin * 0.9
+        if nacc / interv < 0.05:
+            sout = sin * 0.5
+        if nacc / interv < 0.001:
+            sout = sin * 0.1
+        if nacc / interv > 0.5:
+            sout = sin * 1.1
+        if nacc / interv > 0.75:
+            sout = sin * 2
+        if nacc / interv > 0.95:
+            sout = sin * 10
+        return sout
+
+
     
 # class MHwGalgo(InfAlgo):
 #     """
