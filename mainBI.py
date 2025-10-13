@@ -37,8 +37,8 @@ casep = 0
 # casep = 1
 # casep = 2
 
-# inftype = 'MH'
-inftype = 'MHwG'
+inftype = 'MH'
+# inftype = 'MHwG'
 
 #%%############################################################################
 # DEFINITION OF APPLICATION / CALIBRATION CASE
@@ -218,8 +218,8 @@ if inftype == 'MH':
 if inftype == 'MHwG':
     MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
                        verbose=verbose)
-# MCalgo.initialize(obsvar, rndUs, rnds, svar=sexp, sdisc=sdexp)
-MCalgo.initialize(obsvar, rndUs, rnds, svar=1)
+    
+MCalgo.initialize(obsvar, rndUs, rnds)
 MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()

@@ -293,44 +293,20 @@ fig.colorbar(cmap, ax=ax, label='abs error')
 from itertools import chain
 
 from pyBI.base import UnifVar, NormVar, HalfNormVar, InvGaussVar, ObsVar
-from pyBI.base import HGP, GaussLike
-from pyBI.inference import MHalgo, MHwGalgo, InfAlgo, InfAlgo2, MHwGalgo2
+from pyBI.inference import MHalgo, MHwGalgo
 
 
 Ndim = 8 + 1
 # sinvg = [0.2, -0.1, 100000]
 # sinvg = [0.1, 10000, 1000000]
 
-# sm = [100]*Ndim
-# sm = list(np.array([1004.88917, 127.83855, 393.73375, 105.59591, 444.7334 ,
-#                      500.32589,   1.26687, 488.87955, 427.2726])/float(Ndim))
-# sm = [1000, 100, 100, 10, 10, 10, 1, 10, 10]
-# smexp = 738
-# smexp = 1000
-# covProp = np.eye(Ndim)*1e-1
-# LLTprop = np.linalg.cholesky(covProp)
 
-# rndUs = [UnifVar([-3000,3000]),
-#          UnifVar([-3000,3000]),
-#          UnifVar([-5000,5000]),
-#          UnifVar([500,2000]),
-#          UnifVar([1000,5000]),
-#          UnifVar([-2000,2000]),
-#          UnifVar([-3,10]),
-#          UnifVar([-7000,-3000]),
-#          UnifVar([9000,13000])
-# ]
-
-# rndUs = [NormVar([0, 10000]), NormVar([0, 5000]), NormVar([0, 5000]),
-#          NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000]),
-#          NormVar([0, 5000]), NormVar([0, 5000]), NormVar([0, 5000])]
-
-rndUs = [NormVar([0, 1000]), NormVar([0, 500]), NormVar([0, 500]),
-         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500]),
-         NormVar([0, 500]), NormVar([0, 500]), NormVar([0, 500])]
+rndUs = [NormVar([0, 1000000]), NormVar([0, 50000]), NormVar([0, 50000]),
+         NormVar([0, 50000]), NormVar([0, 50000]), NormVar([0, 50000]),
+         NormVar([0, 50000]), NormVar([0, 50000]), NormVar([0, 50000])]
 
 # rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
-rnds = HalfNormVar(param=2000)
+rnds = HalfNormVar(param=80000)
 
 def modelfit(x,b):
     return np.atleast_2d(b[0] + \
@@ -343,43 +319,23 @@ def modelfit(x,b):
                          b[7]*x[:,6] + 
                          b[8]*x[:,7])[0]
 
-bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
-                    [float(rnds.draw())])
-# bstart[-1] = 110000
-
-# bstart = np.array([36.52702, -1961.62422, -3688.57167,
-#                      1261.74547,  3532.65053,  -167.66288,
-#            0.78829, -3416.72979, 15082.10336, 80000])
-
-# bstart = np.array([-896.5297964447237,
-#                     -1440.55736, -1052.00614,  1389.29935,
-#                     1963.42087,   212.32972,  1.19937,
-#                     -1147.10989,  7124.50073, 
-#                     72909.60395185255])
+# bstart = np.array([rndUs[i].draw() for i in range(Ndim)] + \
+#                     [float(rnds.draw())])
+bstart = np.array([0]*9 + [80000])
 
 obsvar = ObsVar(obs=np.c_[y_train], prev_model=modelfit, cond_var=X_train)
 
-NMCMC = 30000
-Nburn = 5000
+NMCMC = 50000
+Nburn = 10000
+Nthin = 100
 verbose = True
 
-# MCalgo = MHwGalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
+# MCalgo = MHwGalgo(NMCMC, Nthin=Nthin, Nburn=Nburn, is_adaptive=True,
 #                     verbose=verbose)
-MCalgo = MHalgo(NMCMC, Nthin=100, Nburn=Nburn, is_adaptive=True,
+MCalgo = MHalgo(NMCMC, Nthin=Nthin, Nburn=Nburn, is_adaptive=True,
                     verbose=verbose)
-# MCalgo = MHalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=False,
-#                     verbose=verbose)
 
-# tmp = obsvar.loglike(bstart[:Ndim],
-#                      rnds.diagSmat(s=bstart[Ndim],
-#                                 N=obsvar.dimdata))
-
-svar = [987.14257, 148.35947, 454.2968 , 174.51169, 480.13822, 499.13329,   2.31371,
-       498.01483, 471.80237]
-
-MCalgo.initialize(obsvar, rndUs, rnds, svar=1, sdisc=1)
-# MCalgo.sdisc = smexp
-# MCalgo.svar = sm
+MCalgo.initialize(obsvar, rndUs, rnds, svar=1000)
 MCalgo.MCchain[0] = bstart
 MCalgo.state(0, set_state=True)
 MCout, llout = MCalgo.runInference()
@@ -398,48 +354,38 @@ print(MCalgo)
 # PROPAGATION OF POSTERIOR IN MODEL
 ###############################################################################
 
-# manuMAP  = np.array([36.52702, -1961.62422, -3688.57167,
-#                      1261.74547,  3532.65053,  -167.66288,
-#            0.78829, -3416.72979, 15082.10336, 80000])
-# manuMAP  = np.array([36.52702, -1961.62422, -3688.57167,
-#                      1261.74547,  3532.65053,  -167.66288,
-#            0.78829, -3416.72979, 15000.10336, 80000])
+manuMAP = MCalgo.MAP
 
-# manuMAP = np.array([-896.5297964447237,
-#                     -1440.55736, -1052.00614,  1389.29935,
-#                     1963.42087,   212.32972,  1.19937,
-#                     -1147.10989,  7124.50073, 
-#                     72909.60395185255])
-
-manuMAP = np.array([-634.8074,
-                    -1487.9415, -1499.58789,  1386.33006,
-                    2926.48012,   -480.5321,  0.69041,
-                    -1510.5298,  7561.6451, 
-                    71378.60979622297])
-
-# manuMAP = np.array([0,-3000,0,0,0,0,30,15000,0]+[80000])
-
-postpar = MCalgo.MCchain
+postpar = MCalgo.cut_chain
 
 def predy(x,b):
     return b[0] + np.sum(b[1:9]*x)
 
 xtry = X_test[:100,:]
-postY = np.array([[predy(xx, bb) for bb in postpar[5000::20]] for xx in xtry]).T
+postY = np.array([[predy(xx, bb) for bb in postpar] for xx in xtry]).T
+postYeps = postY + \
+            sst.norm(loc=0, scale=postpar[:,-1]).rvs(
+                size=(100,postpar.shape[0])).T
 yMAP = np.array([predy(xx, manuMAP) for xx in xtry]).T
+yMAPtest = np.array([predy(xx, manuMAP) for xx in X_test]).T
 
 fig, ax = plt.subplots()
-# ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
+ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
 ax.plot(xtry[:,-1], postY.T, '.k')
 ax.plot(xtry[:,-1], y_test[:100] ,'or')
-ax.plot(xtry[:,-1], yMAP, '+b')
+ax.plot(xtry[:,-1], yMAP, '+g')
 
 
-# # %%
-
-# logMAP = obsvar.loglike(manuMAP[:Ndim],
-#                      rnds.diagSmat(s=manuMAP[Ndim],
-#                                 N=obsvar.dimdata))
 logMAP = obsvar.loglike_uv(manuMAP[:Ndim], manuMAP[Ndim])
 print(logMAP)
+# %%
+
+idsort = np.argsort(yMAPtest) 
+filtsorted = yMAPtest[idsort]
+fig, ax = plt.subplots()
+ax.imshow(img)
+cmap = ax.scatter((X_lat_test[idsort,0]+120)*70+354,
+                  -(X_lat_test[idsort,1]-38)*70+312, c=filtsorted,
+            cmap='jet', marker='.', s=10, alpha=1, vmin=0, vmax=500000)
+fig.colorbar(cmap, ax=ax, label=df.columns[8])
 # %%

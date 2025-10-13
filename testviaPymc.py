@@ -85,9 +85,9 @@ import pytensor.tensor as pt
 
 
 with pm.Model() as linear_model:
-    intercept = pm.Normal("intercept", mu=0, sigma=1000)
-    weights = pm.Normal("weights", mu=0, sigma=500, shape=dim)
-    sigma = pm.HalfNormal("sigma", sigma=2000)
+    intercept = pm.Normal("intercept", mu=0, sigma=1000000)
+    weights = pm.Normal("weights", mu=0, sigma=50000, shape=dim)
+    sigma = pm.HalfNormal("sigma", sigma=80000)
     mu = pt.dot(X_train, weights) + intercept
     # mu = pm.Deterministic("mu", intercept + pt.dot(XX, weights)) # other formulation
     likelihood = pm.Normal("likelihood", mu=mu, sigma=sigma, observed=y_train)
@@ -97,9 +97,9 @@ with pm.Model() as linear_model:
 
 with linear_model:
     # Run the No-U-Turn Sampler (NUTS)
-    # idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
-    idata = pm.sample(draws=30000, tune=5000,
-                       step=pm.Metropolis(tune_interval=500))
+    idata = pm.sample(draws=2000, tune=2000, target_accept=0.8)
+    # idata = pm.sample(draws=30000, tune=5000,
+    #                    step=pm.Metropolis(tune_interval=500))
 
 print("\n--- Model Summary ---")
 pm.summary(idata)
