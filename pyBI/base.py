@@ -1,5 +1,5 @@
-import numpy as np
-from scipy.optimize import minimize
+import numpy as np ## ONLY REFERENCE LIBRARY
+from scipy.optimize import minimize ## FOR GP HYPERPARAM TUNING
 
 class RandVar():
     def __init__(self, param=None):
@@ -115,6 +115,12 @@ class InvGaussVar(RandVar):
     def diagSmat(self, s=None, N=1):
         s0 = self.param[0]*self.param[2] + self.param[1] if s is None else s
         return np.eye(N)*s0**2
+
+
+
+## GP AND GAUSSIAN LIKELIHOOD IMPLEMENTATION
+## SHOULD PROBABLY BE DOUBLE CHECKED
+## (BELOW)
 
 
 class ObsVar():
