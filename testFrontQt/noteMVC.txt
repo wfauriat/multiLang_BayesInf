@@ -1,0 +1,28 @@
+PyQt VS React
+
+Feature	            PyQt MVC (Python/Desktop)	                        React MVC (JavaScript/Web)
+Primary Goal    	Performance & Native Experience	                    Portability & Universal Access
+Concurrency	        True Multi-Threading (QThread)	                    Single-Threaded Asynchronicity (async/await)
+Speed (CPU-Bound)	Faster (runs on separate CPU cores)	                Slower (shares a single CPU thread)
+Complexity	        High (Managing thread safety is difficult)	        Low (Managing async flow is simpler)
+Architecture	    Strict separation of classes	                    View and Controller often merged via Hooks
+Best For	        Internal tools, data processing, heavy computation	Customer-facing apps, mobile/desktop reach, rapid development
+
+
+Category	    PyQt
+Primary Output	Executable files (.exe, .app) that run locally on a user's machine.
+Technology	    Python programming language + the robust Qt C++ framework.
+Deployment	    Requires packaging tools (like PyInstaller) to bundle Python and Qt libraries.
+Core Skills	    Object-Oriented Programming (OOP) in Python, understanding desktop layouts, event loops, signals/slots, and system integration.
+Best For	    Internal tools, scientific modeling/data analysis applications (like the one we built), complex utilities, offline-first software, and hardware interaction.
+Pros	        Performance (backed by C++ Qt), deep system access, no reliance on web browsers, strong tooling for complex native UI.
+Cons	        Less relevant for web-first companies, more complex deployment process, not natively cross-platform for mobile/web (though Qt has modules, PyQt is less used here).
+
+Category	    React
+Primary Output	Browser-rendered HTML, CSS, and JavaScript.
+Technology	    JavaScript/TypeScript programming language + modern browser APIs.
+Deployment	    Hosted on a web server, accessible via URL.
+Core Skills	    JavaScript/TypeScript, Functional Programming, State Management (Hooks, Redux), API interaction (REST, GraphQL), HTML/CSS.
+Best For	    E-commerce sites, social media feeds, SaaS platforms, corporate dashboards, and high-interaction web interfaces.
+Pros	        Massive Job Market, runs everywhere a browser is, instantaneous updates, excellent ecosystem for scaling web apps.
+Cons	        Requires a server/browser to run, slower performance for purely local/CPU-intensive tasks, security reliance on web standards.
