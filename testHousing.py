@@ -54,13 +54,13 @@ np.set_printoptions(suppress=True, precision=4)
 #        'totalBedrooms', 'population', 'households', 'medianIncome',
 #        'medianHouseValue']
 
-img = Image.open('cal_map.jpg')
+img = Image.open('./cases_data/cal_map.jpg')
 
 # housing = fetch_california_housing()
 # df = pd.DataFrame(housing.data, columns=housing.feature_names)
 
-datacsv = pd.read_csv('cal_housing.data', header=None, dtype='f8')
-tmp = np.loadtxt('cal_housing.domain', delimiter=':', dtype='U20')
+datacsv = pd.read_csv('./cases_data/cal_housing.data', header=None, dtype='f8')
+tmp = np.loadtxt('./cases_data/cal_housing.domain', delimiter=':', dtype='U20')
 
 df = pd.DataFrame(datacsv.values, columns=tmp[:,0])
 
