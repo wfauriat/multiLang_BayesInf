@@ -38,7 +38,7 @@
      <height>0</height>
     </size>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="layoutCentral">
     <property name="spacing">
      <number>4</number>
     </property>
@@ -83,7 +83,7 @@
       <property name="styleSheet">
        <string notr="true"/>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
+      <layout class="QVBoxLayout" name="layoutCompute">
        <property name="spacing">
         <number>4</number>
        </property>
@@ -119,12 +119,12 @@
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
+         <layout class="QVBoxLayout" name="layoutTitlePanel">
           <property name="spacing">
            <number>4</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="labelTitle">
             <property name="styleSheet">
              <string notr="true"/>
             </property>
@@ -165,7 +165,7 @@
          <property name="midLineWidth">
           <number>0</number>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
+         <layout class="QVBoxLayout" name="layoutDataPanel">
           <property name="spacing">
            <number>4</number>
           </property>
@@ -185,7 +185,7 @@
            <number>9</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="labelDataSelect">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
@@ -208,7 +208,7 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox">
+           <widget class="QComboBox" name="selectDataCase">
             <property name="styleSheet">
              <string notr="true"/>
             </property>
@@ -228,14 +228,14 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="widget" native="true">
+           <widget class="QWidget" name="dataSubPanel" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <layout class="QGridLayout" name="gridLayout_2">
+            <layout class="QGridLayout" name="layoutDataGrid">
              <property name="leftMargin">
               <number>4</number>
              </property>
@@ -252,21 +252,21 @@ text-decoration: underline;</string>
               <number>4</number>
              </property>
              <item row="0" column="0">
-              <widget class="QPushButton" name="pushButton_6">
+              <widget class="QPushButton" name="pushCustomCase">
                <property name="text">
                 <string>Custom</string>
                </property>
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QPushButton" name="pushButton_10">
+              <widget class="QPushButton" name="pushImportData">
                <property name="text">
                 <string>Import Data</string>
                </property>
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="lineEdit">
+              <widget class="QLineEdit" name="lineEdCV">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -288,7 +288,7 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item row="1" column="0">
-              <widget class="QLineEdit" name="lineEdit_2">
+              <widget class="QLineEdit" name="lineEdDataSize">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -332,7 +332,7 @@ text-decoration: underline;</string>
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <layout class="QVBoxLayout" name="layoutRegModelPanel">
           <property name="spacing">
            <number>4</number>
           </property>
@@ -349,7 +349,7 @@ text-decoration: underline;</string>
            <number>9</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="labelRegModel">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -366,7 +366,7 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox_2">
+           <widget class="QComboBox" name="selectRegMod">
             <property name="styleSheet">
              <string notr="true"/>
             </property>
@@ -398,8 +398,8 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="widget_2" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <widget class="QWidget" name="regModelSubPanel" native="true">
+            <layout class="QHBoxLayout" name="layoutRegModelSubPanel">
              <property name="spacing">
               <number>4</number>
              </property>
@@ -416,14 +416,14 @@ text-decoration: underline;</string>
               <number>4</number>
              </property>
              <item>
-              <widget class="QPushButton" name="pushButton_11">
+              <widget class="QPushButton" name="pushParamReg">
                <property name="text">
                 <string>Parameters</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_7">
+              <widget class="QPushButton" name="pushFitReg">
                <property name="text">
                 <string>Fit Model</string>
                </property>
@@ -455,7 +455,7 @@ text-decoration: underline;</string>
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
+         <layout class="QVBoxLayout" name="layoutBayesModel">
           <property name="spacing">
            <number>4</number>
           </property>
@@ -472,7 +472,7 @@ text-decoration: underline;</string>
            <number>9</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_9">
+           <widget class="QLabel" name="labelBayesModel">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -489,7 +489,7 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="comboBox_3">
+           <widget class="QComboBox" name="selectBayesModel">
             <property name="styleSheet">
              <string notr="true"/>
             </property>
@@ -511,14 +511,14 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="widget_3" native="true">
+           <widget class="QWidget" name="bayesModelSubPanel" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <layout class="QHBoxLayout" name="layoutBayesModelSubPanel">
              <property name="spacing">
               <number>4</number>
              </property>
@@ -535,7 +535,7 @@ text-decoration: underline;</string>
               <number>4</number>
              </property>
              <item>
-              <widget class="QComboBox" name="comboBox_4">
+              <widget class="QComboBox" name="selectParamTune">
                <item>
                 <property name="text">
                  <string>Parameter</string>
@@ -544,8 +544,8 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item>
-              <widget class="QWidget" name="widget_4" native="true">
-               <layout class="QGridLayout" name="gridLayout_3">
+              <widget class="QWidget" name="bayesTuningPanel" native="true">
+               <layout class="QGridLayout" name="layoutBayesGrid">
                 <property name="leftMargin">
                  <number>4</number>
                 </property>
@@ -562,7 +562,7 @@ text-decoration: underline;</string>
                  <number>4</number>
                 </property>
                 <item row="0" column="0">
-                 <widget class="QComboBox" name="comboBox_5">
+                 <widget class="QComboBox" name="selectDistType">
                   <item>
                    <property name="text">
                     <string>Type</string>
@@ -586,14 +586,14 @@ text-decoration: underline;</string>
                  </widget>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QPushButton" name="pushButton_8">
+                 <widget class="QPushButton" name="pushParamAuto">
                   <property name="text">
                    <string>Auto</string>
                   </property>
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <widget class="QLineEdit" name="lineEdit_3">
+                 <widget class="QLineEdit" name="lineEdpar1">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                     <horstretch>0</horstretch>
@@ -606,7 +606,7 @@ text-decoration: underline;</string>
                  </widget>
                 </item>
                 <item row="1" column="1">
-                 <widget class="QLineEdit" name="lineEdit_4">
+                 <widget class="QLineEdit" name="lineEdpar2">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                     <horstretch>0</horstretch>
@@ -641,7 +641,7 @@ text-decoration: underline;</string>
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
+         <layout class="QVBoxLayout" name="layoutInferencePanel">
           <property name="spacing">
            <number>4</number>
           </property>
@@ -658,7 +658,7 @@ text-decoration: underline;</string>
            <number>9</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_10">
+           <widget class="QLabel" name="labelInferenceConfig">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -675,8 +675,8 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="widget_5" native="true">
-            <layout class="QGridLayout" name="gridLayout">
+           <widget class="QWidget" name="inferenceSubPanel" native="true">
+            <layout class="QGridLayout" name="layoutInferenceSubPanel">
              <property name="leftMargin">
               <number>4</number>
              </property>
@@ -693,7 +693,7 @@ text-decoration: underline;</string>
               <number>4</number>
              </property>
              <item row="1" column="0">
-              <widget class="QLineEdit" name="lineEdit_5">
+              <widget class="QLineEdit" name="lineEdMC1">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -712,7 +712,7 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item row="1" column="2">
-              <widget class="QLineEdit" name="lineEdit_7">
+              <widget class="QLineEdit" name="lineEdMC3">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -731,7 +731,7 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item row="0" column="0">
-              <widget class="QRadioButton" name="radioButton">
+              <widget class="QRadioButton" name="radioStepType1">
                <property name="maximumSize">
                 <size>
                  <width>80</width>
@@ -749,7 +749,7 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QRadioButton" name="radioButton_2">
+              <widget class="QRadioButton" name="radioStepType2">
                <property name="maximumSize">
                 <size>
                  <width>80</width>
@@ -767,7 +767,7 @@ text-decoration: underline;</string>
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="lineEdit_6">
+              <widget class="QLineEdit" name="lineEdMC2">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -789,17 +789,17 @@ text-decoration: underline;</string>
            </widget>
           </item>
           <item>
-           <widget class="QWidget" name="widget_6" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <widget class="QWidget" name="computeSubPanel" native="true">
+            <layout class="QHBoxLayout" name="layoutComputeSubPanel">
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="pushCompute">
                <property name="text">
                 <string>Compute / Refresh</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_2">
+              <widget class="QPushButton" name="pushExport">
                <property name="text">
                 <string>Export Results</string>
                </property>
@@ -850,7 +850,7 @@ text-decoration: underline;</string>
       <property name="styleSheet">
        <string notr="true"/>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="layoutPanel">
        <property name="spacing">
         <number>4</number>
        </property>
@@ -867,7 +867,7 @@ text-decoration: underline;</string>
         <number>4</number>
        </property>
        <item>
-        <widget class="QTabWidget" name="tabWidget">
+        <widget class="QTabWidget" name="tabViewPanel">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -955,7 +955,7 @@ text-decoration: underline;</string>
          <property name="frameShadow">
           <enum>QFrame::Plain</enum>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QHBoxLayout" name="layoutDisplaySubPanel">
           <item>
            <widget class="QFrame" name="displayControl">
             <property name="sizePolicy">
@@ -982,9 +982,9 @@ text-decoration: underline;</string>
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_8">
+            <layout class="QVBoxLayout" name="layoutDisplayControl">
              <item>
-              <widget class="QLabel" name="label_2">
+              <widget class="QLabel" name="labelDisplay">
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -1001,8 +1001,8 @@ font: 9pt &quot;Sans Serif&quot;;</string>
               </widget>
              </item>
              <item>
-              <widget class="QWidget" name="widget_7" native="true">
-               <layout class="QGridLayout" name="gridLayout_4">
+              <widget class="QWidget" name="displayFineControl" native="true">
+               <layout class="QGridLayout" name="layoutDisplayFineControl">
                 <property name="leftMargin">
                  <number>5</number>
                 </property>
@@ -1019,7 +1019,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                  <number>2</number>
                 </property>
                 <item row="1" column="0">
-                 <widget class="QFrame" name="frame_3">
+                 <widget class="QFrame" name="legendSelectPanel">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                     <horstretch>0</horstretch>
@@ -1032,37 +1032,37 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_9">
+                  <layout class="QVBoxLayout" name="layoutControlVert1">
                    <item>
-                    <widget class="QCheckBox" name="checkBox_2">
+                    <widget class="QCheckBox" name="checkLegend1">
                      <property name="text">
                       <string>Train Data</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox_4">
+                    <widget class="QCheckBox" name="checkLegend2">
                      <property name="text">
                       <string>Test Data</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox_5">
+                    <widget class="QCheckBox" name="checkLegend3">
                      <property name="text">
                       <string>Post MAP</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox_3">
+                    <widget class="QCheckBox" name="checkLegend4">
                      <property name="text">
                       <string>Post Dist Y</string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="checkBox">
+                    <widget class="QCheckBox" name="checkLegend5">
                      <property name="text">
                       <string>Regressor</string>
                      </property>
@@ -1072,16 +1072,16 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                  </widget>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QFrame" name="frame_2">
+                 <widget class="QFrame" name="rangeSelectionPanel">
                   <property name="frameShape">
                    <enum>QFrame::StyledPanel</enum>
                   </property>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_6">
+                  <layout class="QGridLayout" name="layoutControlGrid2">
                    <item row="1" column="1">
-                    <widget class="QLineEdit" name="lineEdit_9">
+                    <widget class="QLineEdit" name="lineEdXmax">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                        <horstretch>0</horstretch>
@@ -1100,21 +1100,21 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QPushButton" name="pushButton_3">
+                    <widget class="QPushButton" name="pushAutoRange">
                      <property name="text">
                       <string>Auto</string>
                      </property>
                     </widget>
                    </item>
                    <item row="0" column="0">
-                    <widget class="QLabel" name="label_11">
+                    <widget class="QLabel" name="labelRange">
                      <property name="text">
                       <string>Range</string>
                      </property>
                     </widget>
                    </item>
                    <item row="1" column="0">
-                    <widget class="QLineEdit" name="lineEdit_8">
+                    <widget class="QLineEdit" name="lineEdXmin">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                        <horstretch>0</horstretch>
@@ -1133,7 +1133,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                     </widget>
                    </item>
                    <item row="2" column="0">
-                    <widget class="QLineEdit" name="lineEdit_10">
+                    <widget class="QLineEdit" name="lineEdYmin">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                        <horstretch>0</horstretch>
@@ -1152,7 +1152,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                     </widget>
                    </item>
                    <item row="2" column="1">
-                    <widget class="QLineEdit" name="lineEdit_11">
+                    <widget class="QLineEdit" name="lineEdYmax">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                        <horstretch>0</horstretch>
@@ -1174,16 +1174,16 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                  </widget>
                 </item>
                 <item row="1" column="1">
-                 <widget class="QFrame" name="frame_4">
+                 <widget class="QFrame" name="subVisuPanel">
                   <property name="frameShape">
                    <enum>QFrame::StyledPanel</enum>
                   </property>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_7">
+                  <layout class="QGridLayout" name="layoutControlGrid3">
                    <item row="0" column="0">
-                    <widget class="QLineEdit" name="lineEdit_12">
+                    <widget class="QLineEdit" name="lineEdSubSampVisu">
                      <property name="maximumSize">
                       <size>
                        <width>80</width>
@@ -1196,21 +1196,21 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                     </widget>
                    </item>
                    <item row="1" column="0">
-                    <widget class="QLineEdit" name="lineEdit_13">
+                    <widget class="QLineEdit" name="lineEdIDSelY">
                      <property name="placeholderText">
                       <string>ID Y</string>
                      </property>
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QLineEdit" name="lineEdit_15">
+                    <widget class="QLineEdit" name="lineEdIDSelPar">
                      <property name="placeholderText">
                       <string>ID param</string>
                      </property>
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QPushButton" name="pushButton_4">
+                    <widget class="QPushButton" name="pushAutoSubSamp">
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
@@ -1226,7 +1226,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                  </widget>
                 </item>
                 <item row="0" column="0">
-                 <widget class="QFrame" name="frame">
+                 <widget class="QFrame" name="dimensionSelectionPanel">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                     <horstretch>0</horstretch>
@@ -1239,30 +1239,30 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_5">
+                  <layout class="QGridLayout" name="layoutControlGrid1">
                    <item row="0" column="0">
-                    <widget class="QComboBox" name="comboBox_6">
+                    <widget class="QComboBox" name="selectDimR">
                      <property name="placeholderText">
                       <string>Dim X</string>
                      </property>
                     </widget>
                    </item>
                    <item row="1" column="1">
-                    <widget class="QComboBox" name="comboBox_8">
+                    <widget class="QComboBox" name="selectDim2">
                      <property name="placeholderText">
                       <string>Scatter2</string>
                      </property>
                     </widget>
                    </item>
                    <item row="0" column="1">
-                    <widget class="QComboBox" name="comboBox_9">
+                    <widget class="QComboBox" name="selectDimP">
                      <property name="placeholderText">
                       <string>Grid</string>
                      </property>
                     </widget>
                    </item>
                    <item row="1" column="0">
-                    <widget class="QComboBox" name="comboBox_7">
+                    <widget class="QComboBox" name="selectDim1">
                      <property name="placeholderText">
                       <string>Scatter1</string>
                      </property>
@@ -1319,7 +1319,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <widget class="QLabel" name="label_3">
+            <widget class="QLabel" name="labelResults">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -1336,7 +1336,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
               <string>Inference Results</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="labelResult1">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -1352,7 +1352,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
               <string>Inference details</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_4">
+            <widget class="QLabel" name="labelResult2">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -1368,7 +1368,7 @@ font: 9pt &quot;Sans Serif&quot;;</string>
               <string>MAP / Model SnapShot</string>
              </property>
             </widget>
-            <widget class="QLabel" name="label_5">
+            <widget class="QLabel" name="labelResult3">
              <property name="geometry">
               <rect>
                <x>10</x>
