@@ -1,6 +1,6 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6 import uic
+from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5 import uic
 
 from ui_mywindow import Ui_MainWindow 
 
@@ -26,8 +26,8 @@ class SecondWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = uic.loadUi("BayesRegGUI.ui")    # Method 1 : direct runtime import conversion
-    # window = MyMainWindow()
+    # window = uic.loadUi("BayesRegGUI.ui")    # Method 1 : direct runtime import conversion
+    window = MyMainWindow()
     window.show()
     sys.exit(app.exec())
 

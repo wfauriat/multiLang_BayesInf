@@ -369,11 +369,15 @@ postYeps = postY + \
 yMAP = np.array([predy(xx, manuMAP) for xx in xtry]).T
 yMAPtest = np.array([predy(xx, manuMAP) for xx in X_test]).T
 
+y_pred = model.predict(xtry)
+y_pred = np.minimum(y_pred, 500000)
+
 fig, ax = plt.subplots()
 ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
 ax.plot(xtry[:,-1], postY.T, '.k')
 ax.plot(xtry[:,-1], y_test[:100] ,'or')
 ax.plot(xtry[:,-1], yMAP, '+g')
+ax.plot(xtry[:,-1], y_pred, 'sm', ms=4)
 
 
 logMAP = obsvar.loglike_uv(manuMAP[:Ndim], manuMAP[Ndim])
