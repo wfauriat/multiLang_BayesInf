@@ -19,8 +19,8 @@ xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
 ymes = modeltrue(xmes, b0)
 ymes += sst.norm().rvs(xmes.shape[0])*nslvl
 
-# data = np.loadtxt('data.txt', delimiter=',')
-# LL = np.loadtxt('LL.txt')
+data = np.loadtxt('data.txt', delimiter=',')
+LL = np.loadtxt('LL.txt')
 idL = np.argsort(LL)
 Ndim = data.shape[1]
 MAP = data[idL[-1],:]
