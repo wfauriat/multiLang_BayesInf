@@ -209,7 +209,6 @@ class Ui_MainWindow(object):
         self.selectRegMod.addItem("")
         self.selectRegMod.addItem("")
         self.selectRegMod.addItem("")
-        self.selectRegMod.addItem("")
 
 
         self.layoutRegModelPanel.addWidget(self.selectRegMod)
@@ -605,27 +604,29 @@ class Ui_MainWindow(object):
 
         self.checkLegend1 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend1.setObjectName("checkLegend1")
+        self.checkLegend1.setChecked(True)
 
 
         self.layoutControlVert1.addWidget(self.checkLegend1)
         self.checkLegend2 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend2.setObjectName("checkLegend2")
+        self.checkLegend2.setChecked(True)
 
 
         self.layoutControlVert1.addWidget(self.checkLegend2)
         self.checkLegend3 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend3.setObjectName("checkLegend3")
-
+        self.checkLegend3.setChecked(True)
 
         self.layoutControlVert1.addWidget(self.checkLegend3)
         self.checkLegend4 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend4.setObjectName("checkLegend4")
-
+        self.checkLegend4.setChecked(True)
 
         self.layoutControlVert1.addWidget(self.checkLegend4)
         self.checkLegend5 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend5.setObjectName("checkLegend5")
-
+        self.checkLegend5.setChecked(True)
 
         self.layoutControlVert1.addWidget(self.checkLegend5)
         self.layoutDisplayFineControl.addWidget(self.legendSelectPanel, 1, 0, 1, 1)
@@ -840,11 +841,10 @@ class Ui_MainWindow(object):
         self.lineEdCV.setPlaceholderText(_translate("MainWindow", "Cross Validation"))
         self.lineEdDataSize.setPlaceholderText(_translate("MainWindow", "Data set size"))
         self.labelRegModel.setText(_translate("MainWindow", "Regressor Model Selection (deterministic)"))
-        self.selectRegMod.setItemText(0, _translate("MainWindow", "Regressor type"))
-        self.selectRegMod.setItemText(1, _translate("MainWindow", "Linear Polynomial"))
-        self.selectRegMod.setItemText(2, _translate("MainWindow", "ElasticNet"))
-        self.selectRegMod.setItemText(3, _translate("MainWindow", "SVR"))
-        self.selectRegMod.setItemText(4, _translate("MainWindow", "RandomForest"))
+        self.selectRegMod.setItemText(0, _translate("MainWindow", "Linear Polynomial"))
+        self.selectRegMod.setItemText(1, _translate("MainWindow", "ElasticNet"))
+        self.selectRegMod.setItemText(2, _translate("MainWindow", "SVR"))
+        self.selectRegMod.setItemText(3, _translate("MainWindow", "RandomForest"))
         self.pushParamReg.setText(_translate("MainWindow", "Parameters"))
         self.pushFitReg.setText(_translate("MainWindow", "Fit Model"))
         self.labelBayesModel.setText(_translate("MainWindow", "Bayesian Model Selection"))
