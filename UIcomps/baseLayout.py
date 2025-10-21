@@ -744,7 +744,8 @@ class Ui_MainWindow(object):
 
         self.selectDimR = QtWidgets.QComboBox(parent=self.dimensionSelectionPanel)
         self.selectDimR.setObjectName("selectDimR")
-
+        # self.selectDimR.addItem("")
+        # self.selectDimR.addItem("")
 
         self.layoutControlGrid1.addWidget(self.selectDimR, 0, 0, 1, 1)
         self.selectDim2 = QtWidgets.QComboBox(parent=self.dimensionSelectionPanel)
@@ -887,6 +888,8 @@ class Ui_MainWindow(object):
         self.lineEdIDSelPar.setPlaceholderText(_translate("MainWindow", "ID param"))
         self.pushAutoSubSamp.setText(_translate("MainWindow", "Rng"))
         self.selectDimR.setPlaceholderText(_translate("MainWindow", "Dim X"))
+        # self.selectDimR.setItemText(0, _translate("MainWindow", "0"))
+        # self.selectDimR.setItemText(1, _translate("MainWindow", "1"))
         self.selectDim2.setPlaceholderText(_translate("MainWindow", "Scatter2"))
         self.selectDimP.setPlaceholderText(_translate("MainWindow", "Grid"))
         self.selectDim1.setPlaceholderText(_translate("MainWindow", "Scatter1"))

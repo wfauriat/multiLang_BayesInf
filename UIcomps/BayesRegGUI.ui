@@ -1242,6 +1242,9 @@ font: 9pt &quot;Sans Serif&quot;;</string>
                   <layout class="QGridLayout" name="layoutControlGrid1">
                    <item row="0" column="0">
                     <widget class="QComboBox" name="selectDimR">
+                     <property name="currentIndex">
+                      <number>-1</number>
+                     </property>
                      <property name="placeholderText">
                       <string>Dim X</string>
                      </property>
