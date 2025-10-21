@@ -38,13 +38,14 @@ class ModelUI(QObject):
         self.obsvar = None
         self.bstart = None
         self.load_case()
+        # print("here")
 
     def load_case(self):
         if self.data_selected_case == "Polynomial":
             self.data_case = PolynomialCase()
             self.rndUs = [UnifVar([-3,3]) for _ in range(3)]
             self.rnds = HalfNormVar(param=0.5)
-            self.obsvar = ObsVar(obs=self.data_case.ymes,
+            self.obsvar = ObsVar(obs=np.c_[np.ravel(self.data_case.ymes)],
                                 prev_model=self.data_case.form_fit, 
                                 cond_var=self.data_case.xmes)
             self.bstart = np.array([self.rndUs[i].draw() for i in range(3)] + \
@@ -56,22 +57,21 @@ class ModelUI(QObject):
                 NormVar([0, 50000]), NormVar([0, 50000]), NormVar([0, 50000]),
                 NormVar([0, 50000]), NormVar([0, 50000]), NormVar([0, 50000])]
             self.rnds = HalfNormVar(param=80000)
-            self.obsvar = ObsVar(obs=np.c_[self.data_case.y_train],
+            self.obsvar = ObsVar(obs=np.c_[self.data_case.ymes],
                     prev_model=self.data_case.form_fit, 
-                    cond_var=self.data_case.X_train)
+                    cond_var=self.data_case.xmes)
             self.bstart = np.array([0]*9 + [80000])
 
     def post_treat_chains(self):
         idxrdn = np.random.permutation(
             np.minimum(self.MCalgo.cut_chain.shape[0],100))
         postpar_red = self.postpar[idxrdn]
-        if self.data_selected_case == "Polynomial":
-            self.postY = np.array([self.data_case.form_fit(
-                self.data_case.xmes, bb)[0] for bb in postpar_red])
-        elif self.data_selected_case == "Housing":
-            self.postY = np.array([[self.data_case.form_fit(
-                              np.r_[[xx]], bb)[0] for bb in postpar_red] \
-                            for xx in self.data_case.X_test[:100,:]])
+        self.postY = np.array([[self.data_case.form_fit(
+                            np.r_[[xx]], bb)[0] for bb in postpar_red] \
+                        for xx in self.data_case.xmes])
+        self.postMAP = np.array([self.data_case.form_fit(np.r_[[xx]],
+                             self.MCalgo.MAP) for xx in self.data_case.xmes])
+        self.postYeps = self.postY + np.random.randn(100) * postpar_red[:,-1]
 
 
 ###############################################################################
@@ -179,26 +179,24 @@ class ControllerUI(QObject):
         self._compute_worker()
 
     def draw_plot_tabs(self):
-        if self.model.data_selected_case == "Polynomial":
-            self.view.sc1.axes.clear()
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:,self.view.dimR],
-                                    self.model.postY.T[:,0], '.k', label="posterior prediction")
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:,self.view.dimR],
-                                    self.model.postY.T, '.k')
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:,self.view.dimR],
-                                    np.ravel(self.model.data_case.ymes), 'or',
-                                    label="measured values")
-            self.view.sc1.axes.legend()
-
-        elif self.model.data_selected_case == "Housing":
-            self.view.sc1.axes.clear()
-            self.view.sc1.axes.plot(self.model.data_case.X_test[:100,self.view.dimR],
-                                    self.model.postY[:,0], '.k', label="posterior prediction")
-            self.view.sc1.axes.plot(self.model.data_case.X_test[:100,self.view.dimR],
-                                    self.model.postY, '.k')
-            self.view.sc1.axes.plot(self.model.data_case.X_test[:100,self.view.dimR],
-                                    np.ravel(self.model.data_case.y_test[:100]), 'or',
-                                    label="measured values")
+        self.view.sc1.axes.clear()
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                                self.model.postYeps[:100,0], '.b', label="posterior with noise")
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                                self.model.postY[:100,0], '.k', label="posterior prediction")
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                                self.model.postYeps[:100], '.b')
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                                self.model.postY[:100], '.k')
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                        np.ravel(self.model.postMAP[:100]), '.g',
+                        label="MAP")
+        self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+                                np.ravel(self.model.data_case.ymes[:100]), 'or',
+                                label="measured values")
+        self.view.sc1.axes.plot(self.model.data_case.X_test[:20,self.view.dimR],
+                        np.ravel(self.model.data_case.y_test[:20]), 'sm', ms=3,
+                        label="test values")
         self.view.sc1.axes.legend()
         self.view.sc1.draw()
         self.view.sc2.axes.clear()
@@ -216,6 +214,7 @@ class ControllerUI(QObject):
 
     @pyqtSlot(str)
     def _select_case(self, value):
+        self.view.ui.selectDimR.setCurrentIndex(0)
         self.model.data_selected_case = value
         self.model.load_case()
 
@@ -244,10 +243,7 @@ class ControllerUI(QObject):
         self.thread.start()
 
     def _on_worker_finished(self):
-        if self.model.data_selected_case == "Polynomial":
-            self.view._update_dimR_selection(self.model.data_case.xmes.shape[1])
-        elif self.model.data_selected_case == "Housing": 
-            self.view._update_dimR_selection(self.model.data_case.X_train.shape[1])
+        self.view._update_dimR_selection(self.model.data_case.xmes.shape[1])
         self.view.ui.selectDimR.setCurrentIndex(0)
         self.view._update_dimP_selection(len(self.model.bstart))
         self.view.ui.selectDim1.setCurrentIndex(0)

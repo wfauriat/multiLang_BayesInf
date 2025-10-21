@@ -308,6 +308,7 @@ rndUs = [NormVar([0, 1000000]), NormVar([0, 50000]), NormVar([0, 50000]),
 # rnds = InvGaussVar(param=sinvg) # A REMPLACER PAR HALFNORMAL
 rnds = HalfNormVar(param=80000)
 
+
 def modelfit(x,b):
     return np.atleast_2d(b[0] + \
                          b[1]*x[:,0] +
@@ -373,7 +374,7 @@ y_pred = model.predict(xtry)
 y_pred = np.minimum(y_pred, 500000)
 
 fig, ax = plt.subplots()
-ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
+# ax.plot(xtry[:,-1], np.maximum(postYeps.T,0), '.b')
 ax.plot(xtry[:,-1], postY.T, '.k')
 ax.plot(xtry[:,-1], y_test[:100] ,'or')
 ax.plot(xtry[:,-1], yMAP, '+g')

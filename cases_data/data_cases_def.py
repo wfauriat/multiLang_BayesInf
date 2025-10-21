@@ -12,7 +12,7 @@ class PolynomialCase():
             return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + \
                                 1*x[:,1] + 0.02*x[:,0]**3)
         def modelfit(x,b):
-            return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
+            return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)[0]
         
         self.true_generator = modeltrue
         self.form_fit = modelfit
@@ -22,8 +22,12 @@ class PolynomialCase():
         self.biasp1 = -1
         self.xmes = np.hstack([np.c_[[0, 0.5, 1, 2, 2.5, 2.8, 4, 4.4, 5.2, 5.5]],
                         self.biasp1+self.nsp1*np.c_[np.random.randn(10)]])
-        self.ymes = modeltrue(self.xmes, self.b0)
-        self.ymes += np.random.randn(self.xmes.shape[0])*self.nslvl
+        ymes = modeltrue(self.xmes, self.b0)
+        ymes += np.random.randn(self.xmes.shape[0])*self.nslvl
+        self.ymes = np.ravel(ymes)
+        xrng = np.random.randn(100,2) @ np.diag([1, 1]) + np.array([2, 0])
+        self.X_test = xrng
+        self.y_test = np.ravel(modeltrue(xrng, self.b0))
 
 class HousingCase():
     def __init__(self):
@@ -63,6 +67,9 @@ class HousingCase():
         self.y_train = y_train
         self.X_test = X_test
         self.y_test = y_test
+
+        self.xmes = X_train
+        self.ymes = y_train
 
         def modelfit(x,b):
             return np.atleast_2d(b[0] + \

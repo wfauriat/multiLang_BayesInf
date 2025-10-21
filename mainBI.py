@@ -38,9 +38,8 @@ if casep == 0:
     def modeltrue(x,b):
         return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2 + \
                              1*x[:,1] + 0.02*x[:,0]**3)
-
     def modelfit(x,b):
-        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)
+        return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)[0]
 
     b0 = [2, -1, 2, 0]
     nslvl = 0.1
@@ -66,7 +65,7 @@ if casep == 0:
     # gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20)
     # gp.fit(xmes, ymes.ravel())
 
-if casep == 1:
+if casep == 1: ## CORRECTIONS MADE (MAY NO LONGER WORK)
     def ishigami(x,b):
         return np.atleast_2d(np.sin(x[:,0]) + b[:,0]*np.sin(x[:,1])**2 +  \
                b[:,1]*np.sin(x[:,0])*x[:,2]**4)
@@ -115,7 +114,7 @@ if casep == 1:
 
     xmes = XX
 
-if casep == 2:
+if casep == 2: ## CORRECTIONS MADE (MAY NO LONGER WORK)
     Nsamp = 50
     mu_true = np.array([1,2,4])
     cor_true = np.array([[1,     0.8,  -0.1],
@@ -152,7 +151,7 @@ if casep == 0:
     # rndUs = [NormVar([0, 1]) for _ in range(3)]
     # rnds = InvGaussVar(param=sinvg)
     rnds = HalfNormVar(param=0.5)
-    obsvar = ObsVar(obs=ymes, prev_model=modelfit, cond_var=xmes)
+    obsvar = ObsVar(obs=np.c_[np.ravel(ymes)], prev_model=modelfit, cond_var=xmes)
 
     bstart = np.array([rndUs[i].draw() for i in range(3)] + \
                        [float(rnds.draw())])
