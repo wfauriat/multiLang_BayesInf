@@ -1,10 +1,8 @@
 import numpy as np
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout
-
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtGui import QDoubleValidator
 
 from multiLang_BayesInf.UIcomps.baseLayout import Ui_MainWindow
 
@@ -31,6 +29,7 @@ class ModelUI(QObject):
         self.NMCMC = 20000
         self.Nthin = 20
         self.Nburn = 5000
+        self.type_inf = 1
         self.verbose = True
         self.MCalgo = None
         self.MCsort = None
@@ -112,16 +111,31 @@ class ModelUI(QObject):
 ### VIEW OBJECT
 ###############################################################################
 
+validator = QDoubleValidator(-10e8, 10e8, 2)
+
 class ViewMainUI(QMainWindow):
 
     computeSignal = pyqtSignal()
     fitRegSignal = pyqtSignal()
     NMCMCSignal = pyqtSignal(int)
+    NthinSignal = pyqtSignal(int)
+    NburnSignal = pyqtSignal(int)
+
     selectCaseSignal = pyqtSignal(str)
+    selectRegModelSignal = pyqtSignal(str)
+
+    selectParamTuneSignal = pyqtSignal(int)
+    selectDistTypeSignal = pyqtSignal(str)
+    editPar1Signal = pyqtSignal(float)
+    editPar2Signal = pyqtSignal(float)
+
     selectDimRSignal = pyqtSignal(int)
     selectDim1Signal = pyqtSignal(int)
     selectDim2Signal = pyqtSignal(int)
-    selectRegModelSignal = pyqtSignal(str)
+
+    radio1Signal = pyqtSignal(bool)
+    radio2Signal = pyqtSignal(bool)
+
 
     def __init__(self):
         super().__init__()
@@ -135,51 +149,90 @@ class ViewMainUI(QMainWindow):
         self.check3 = 1 
         self.check4 = 1
         self.check5 = 1
+        self.check6 = 0
+        self._update_param_selection(int(3+1)) # initially polynomial case
+        self.activeParamTune = 0
+        self.activePar1 = 0
+        self.activePar2 = 1
 
+        # compute panel
         self.ui.pushCompute.clicked.connect(self._handle_pushCompute)
         self.ui.lineEdMC1.textChanged.connect(self._handle_NMCMC)
-        self.ui.selectDataCase.currentTextChanged.connect(self._handle_select_case)
-        self.ui.selectRegMod.currentTextChanged.connect(self.handle_select_regmod)
+        self.ui.lineEdMC2.textChanged.connect(self._handle_Nthin)
+        self.ui.lineEdMC3.textChanged.connect(self._handle_Nburn)
+        self.ui.radioStepType1.toggled.connect(self._handle_radio1)
+        self.ui.radioStepType2.toggled.connect(self._handle_radio2)
+        # reg panel
+        self.ui.selectDataCase.activated.connect(self._handle_select_case)
+        self.ui.selectRegMod.activated.connect(self._handle_select_regmod)
         self.ui.pushFitReg.clicked.connect(self._handle_pushFitReg)
-        self.ui.selectDimR.currentIndexChanged.connect(self._handle_select_dimR)
-        self.ui.selectDim1.currentIndexChanged.connect(self._handle_select_dim1)
-        self.ui.selectDim2.currentIndexChanged.connect(self._handle_select_dim2)
+        # bayes panel
+        self.ui.selectParamTune.activated.connect(self._handle_select_param)
+        self.ui.selectDistType.activated.connect(self._handle_select_dist_type)
+        self.ui.lineEdpar1.textChanged.connect(self._handle_Edpar1)
+        # self.ui.lineEdpar1.setValidator(validator)
+        self.ui.lineEdpar2.textChanged.connect(self._handle_Edpar2)
+        # self.ui.lineEdpar2.setValidator(validator)
+        # display panel
+        self.ui.selectDimR.currentTextChanged.connect(self._handle_select_dimR)
+        self.ui.selectDimR.activated.connect(self._handle_select_dimR)
+        self.ui.selectDim2.currentTextChanged.connect(self._handle_select_dim2)
+        self.ui.selectDim1.activated.connect(self._handle_select_dim1)
+        self.ui.selectDim2.currentTextChanged.connect(self._handle_select_dim2)
+        self.ui.selectDim2.activated.connect(self._handle_select_dim2)
         self.ui.checkLegend1.clicked.connect(self._handel_checkLegend1)
         self.ui.checkLegend2.clicked.connect(self._handel_checkLegend2)
         self.ui.checkLegend3.clicked.connect(self._handel_checkLegend3)
         self.ui.checkLegend4.clicked.connect(self._handel_checkLegend4)
         self.ui.checkLegend5.clicked.connect(self._handel_checkLegend5)
-
-        self.ui.tab1Layout = QVBoxLayout(self.ui.tab)
-        self.ui.tab2Layout = QVBoxLayout(self.ui.tab_2)
-        self.ui.tab3Layout = QVBoxLayout(self.ui.tab_3)
-        self.ui.tab4Layout = QVBoxLayout(self.ui.tab_4)
-        self.sc1 = MplCanvas(self.ui.tab, width=5, height=4, dpi=100)
-        self.sc2 = MplCanvas(self.ui.tab_2, width=5, height=4, dpi=100)
-        self.sc3 = MplCanvas(self.ui.tab_3, width=5, height=4, dpi=100)
-        self.sc4 = MplCanvas(self.ui.tab_4, width=5, height=4, dpi=100)
-        self.ui.tab1Layout.addWidget(self.sc1)
-        self.ui.tab2Layout.addWidget(self.sc2)
-        self.ui.tab3Layout.addWidget(self.sc3)
-        self.ui.tab4Layout.addWidget(self.sc4)
+        self.ui.checkLegend6.clicked.connect(self._handel_checkLegend6)
 
     def _handle_pushCompute(self):
         self.computeSignal.emit()
-    
-    def _handle_pushFitReg(self):
-        self.fitRegSignal.emit()
-
     def _handle_NMCMC(self):
         value = int(self.ui.lineEdMC1.text())
         self.NMCMCSignal.emit(value)
+    def _handle_Nthin(self):
+        value = int(self.ui.lineEdMC2.text())
+        self.NthinSignal.emit(value)
+    def _handle_Nburn(self):
+        value = int(self.ui.lineEdMC3.text())
+        self.NburnSignal.emit(value)
+    def _handle_radio1(self):
+        value = self.ui.radioStepType1.isChecked()
+        self.radio1Signal.emit(value)
+    def _handle_radio2(self):
+        value = self.ui.radioStepType2.isChecked()
+        self.radio2Signal.emit(value)
 
     def _handle_select_case(self):
         value = self.ui.selectDataCase.currentText()
         self.selectCaseSignal.emit(value)
 
-    def handle_select_regmod(self):
+    def _handle_select_regmod(self):
         value = self.ui.selectRegMod.currentText()
         self.selectRegModelSignal.emit(value)
+    def _handle_pushFitReg(self):
+        self.fitRegSignal.emit()
+
+    def _handle_select_param(self):
+        value = self.ui.selectParamTune.currentIndex()
+        self.selectParamTuneSignal.emit(value)
+    def _handle_select_dist_type(self):
+        value = self.ui.selectDistType.currentText()
+        self.selectDistTypeSignal.emit(value)
+    def _handle_Edpar1(self):
+        try:
+            value = float(self.ui.lineEdpar1.text())
+        except:
+            value = 0
+        self.editPar1Signal.emit(value)
+    def _handle_Edpar2(self):
+        try:
+            value = float(self.ui.lineEdpar2.text())
+        except:
+            value = 0
+        self.editPar2Signal.emit(value)
 
     def _handle_select_dimR(self):
         value = self.ui.selectDimR.currentIndex()
@@ -201,6 +254,10 @@ class ViewMainUI(QMainWindow):
         for i in range(dim):
             self.ui.selectDim1.addItem(str(i))
             self.ui.selectDim2.addItem(str(i))
+    def _update_param_selection(self, dim):
+        self.ui.selectParamTune.clear()
+        for i in range(dim):
+            self.ui.selectParamTune.addItem(str(i))
 
     def _handel_checkLegend1(self, value):
         self.check1 = value
@@ -212,7 +269,8 @@ class ViewMainUI(QMainWindow):
         self.check4 = value
     def _handel_checkLegend5(self, value):
         self.check5 = value
-
+    def _handel_checkLegend6(self, value):
+        self.check6 = value
 
 ###############################################################################
 ### CONTROLLER OBJECT
@@ -227,10 +285,23 @@ class ControllerUI(QObject):
         self.worker = None
 
         self.view.computeSignal.connect(self._handle_pushCompute)
-        self.view.fitRegSignal.connect(self._handle_pushFitReg)
-        self.view.NMCMCSignal.connect(self._getMCMC)
+
+        self.view.NMCMCSignal.connect(self._setNMCMC)
+        self.view.NthinSignal.connect(self._setNthin)
+        self.view.NburnSignal.connect(self._setNburn)
+        self.view.radio1Signal.connect(self._setradio1)
+        self.view.radio2Signal.connect(self._setradio2)
+
         self.view.selectCaseSignal.connect(self._select_case)
+
         self.view.selectRegModelSignal.connect(self._select_reg_model)
+        self.view.fitRegSignal.connect(self._handle_pushFitReg)
+
+        self.view.selectParamTuneSignal.connect(self._select_param_tune)
+        self.view.selectDistTypeSignal.connect(self._select_dist_type)
+        self.view.editPar1Signal.connect(self._setEdpar1)
+        self.view.editPar2Signal.connect(self._setEdpar2)
+
         self.view.selectDimRSignal.connect(self._select_dimR)
         self.view.selectDim1Signal.connect(self._select_dim1)
         self.view.selectDim2Signal.connect(self._select_dim2)
@@ -239,15 +310,22 @@ class ControllerUI(QObject):
         self.view.ui.checkLegend3.clicked.connect(self.draw_plot_tabs)  
         self.view.ui.checkLegend4.clicked.connect(self.draw_plot_tabs)
         self.view.ui.checkLegend5.clicked.connect(self.draw_plot_tabs)
+        self.view.ui.checkLegend6.clicked.connect(self.draw_plot_tabs)
+
 
     def _handle_pushCompute(self):
-        self.model.MCalgo = MHalgo(N=self.model.NMCMC,
-                                   Nthin=self.model.Nthin,
-                                   Nburn=self.model.Nburn,
-                                   is_adaptive=True,
-                                   verbose=self.model.verbose)
-        # MCalgo = MHwGalgo(NMCMC, Nthin=20, Nburn=Nburn, is_adaptive=True,
-        #                    verbose=verbose)
+        if self.model.type_inf:
+            self.model.MCalgo = MHalgo(N=self.model.NMCMC,
+                                    Nthin=self.model.Nthin,
+                                    Nburn=self.model.Nburn,
+                                    is_adaptive=True,
+                                    verbose=self.model.verbose)
+        else:
+            self.model.MCalgo = MHwGalgo(N=self.model.NMCMC,
+                                    Nthin=self.model.Nthin,
+                                    Nburn=self.model.Nburn,
+                                    is_adaptive=True,
+                                    verbose=self.model.verbose)
         self.model.MCalgo.initialize(self.model.obsvar,
                                      self.model.rndUs, 
                                      self.model.rnds)
@@ -260,65 +338,148 @@ class ControllerUI(QObject):
         self.draw_plot_tabs()
 
     def draw_plot_tabs(self):
-        self.view.sc1.axes.clear()
+        self.view.ui.sc1.axes.clear()
         if self.view.check4:
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+            self.view.ui.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                     self.model.postYeps[:100,0], '.b', label="posterior with noise")
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+            self.view.ui.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                     self.model.postY[:100,0], '.k', label="posterior prediction")
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+            self.view.ui.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                     self.model.postYeps[:100], '.b')
-            self.view.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+            self.view.ui.sc1.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                     self.model.postY[:100], '.k')
-        if self.view.check3: self.view.sc1.axes.plot(
+        if self.view.check3: self.view.ui.sc1.axes.plot(
                     self.model.data_case.xmes[:100,self.view.dimR],
                     np.ravel(self.model.postMAP[:100]), '.g',
                     label="MAP")
-        if self.view.check5: self.view.sc1.axes.plot(
+        if self.view.check5: self.view.ui.sc1.axes.plot(
                     self.model.data_case.xmes[:100,self.view.dimR],
                     self.model.yreg_pred[:100], '.', color='orange',
                     label="regmod")
-        if self.view.check1: self.view.sc1.axes.plot(
+        if self.view.check1: self.view.ui.sc1.axes.plot(
                     self.model.data_case.xmes[:100,self.view.dimR],
                     np.ravel(self.model.data_case.ymes[:100]), 'or',
                     label="train values") 
-        if self.view.check2: self.view.sc1.axes.plot(
+        if self.view.check2: self.view.ui.sc1.axes.plot(
                     self.model.data_case.X_test[:20,self.view.dimR],
                         np.ravel(self.model.data_case.y_test[:20]), 'sm', ms=3,
                         label="test values")
-        self.view.sc1.axes.legend()
-        self.view.sc1.draw()
-        self.view.sc2.axes.clear()
-        self.view.sc2.axes.scatter(self.model.MCsort[:,self.view.dim1],
+        self.view.ui.sc1.axes.legend()
+        self.view.ui.sc1.draw()
+        self.view.ui.sc2.axes.clear()
+        self.view.ui.sc2.axes.scatter(self.model.MCsort[:,self.view.dim1],
                                    self.model.MCsort[:,self.view.dim2],
                                    c=self.model.LLsort, cmap="jet")
-        self.view.sc2.draw()
-        self.view.sc3.axes.clear()
-        self.view.sc3.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+        self.view.ui.sc2.draw()
+        self.view.ui.sc3.axes.clear()
+        self.view.ui.sc3.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                 np.ravel(self.model.data_case.ymes[:100]) - \
                                 np.ravel(self.model.postMAP[:100]), '.g')
-        self.view.sc3.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
+        self.view.ui.sc3.axes.plot(self.model.data_case.xmes[:100,self.view.dimR],
                                 np.ravel(self.model.data_case.ymes[:100]) - \
                                 np.ravel(self.model.yreg_pred[:100]), '.',
                                 color='orange')
-        self.view.sc3.draw()
-        self.view.sc4.axes.clear()
-        self.view.sc4.axes.plot(self.model.MCalgo.MCchain[:,self.view.dim1])
-        self.view.sc4.draw()
+        self.view.ui.sc3.draw()
+        self.view.ui.sc4.axes.clear()
+        self.view.ui.sc4.axes.plot(self.model.MCalgo.MCchain[:,self.view.dim1])
+        self.view.ui.sc4.draw()
+        self.view.ui.sc5.axes.clear()
+        self.view.ui.sc5.axes.hist(self.model.MCalgo.cut_chain[:,self.view.dim1],
+                                   ec='k', alpha=0.6, bins=30)
+        self.view.ui.sc5.twaxes.clear()
+        xlims = self.view.ui.sc5.axes.get_xlim()
+        if self.view.check6:
+            if self.view.dim1 < len(self.model.bstart)-1:
+                xp = np.linspace(self.model.rndUs[self.view.dim1].min,
+                                    self.model.rndUs[self.view.dim1].max, 100)
+                self.view.ui.sc5.twaxes.plot(xp, 
+                                np.exp([self.model.rndUs[self.view.dim1].logprior(
+                                    x) for x in xp]), 'r')
+            else:
+                xp = np.linspace(self.model.rnds.min,
+                        self.model.rnds.max, 100)
+                self.view.ui.sc5.twaxes.plot(xp, np.exp([self.model.rnds.logprior(
+                                    x) for x in xp]), 'r')
+        else:
+            self.view.ui.sc5.twaxes.clear()
+            self.view.ui.sc5.twaxes.set_xlim(xlims)
+        self.view.ui.sc5.draw()
 
     @pyqtSlot(int)
-    def _getMCMC(self, value):
+    def _setNMCMC(self, value):
         self.model.NMCMC = value
+    @pyqtSlot(int)
+    def _setNthin(self, value):
+        self.model.Nthin = value
+    @pyqtSlot(int)
+    def _setNburn(self, value):
+        self.model.Nburn = value
+    @pyqtSlot(bool)
+    def _setradio1(self, value):
+        self.model.type_inf = value
+        self.view.ui.radioStepType1.setChecked(value)
+        self.view.ui.radioStepType2.setChecked(not(value))
+    @pyqtSlot(bool)
+    def _setradio2(self, value):
+        self.model.type_inf = not(value)
+        self.view.ui.radioStepType1.setChecked(not(value))
+        self.view.ui.radioStepType2.setChecked(value)
 
     @pyqtSlot(str)
     def _select_case(self, value):
         self.view.ui.selectDimR.setCurrentIndex(0)
         self.model.data_selected_case = value
         self.model.load_case()
+        self.view._update_param_selection(len(self.model.rndUs)+1)
 
     @pyqtSlot(str)
     def _select_reg_model(self, value):
         self.model.selected_model = value
+
+    @pyqtSlot(int)
+    def _select_param_tune(self, value):
+        self.view.activeParamTune = value
+        if self.view.activeParamTune < len(self.model.rndUs):
+            self.view.ui.lineEdpar1.setText(
+                str(self.model.rndUs[self.view.activeParamTune].param[0]))
+            self.view.ui.lineEdpar2.setText(
+                str(self.model.rndUs[self.view.activeParamTune].param[1]))
+            if isinstance(self.model.rndUs[self.view.activeParamTune], NormVar):
+                self.view.ui.selectDistType.setCurrentIndex(0)
+            elif isinstance(self.model.rndUs[self.view.activeParamTune], UnifVar):
+                self.view.ui.selectDistType.setCurrentIndex(1)
+            elif isinstance(self.model.rndUs[self.view.activeParamTune], HalfNormVar):
+                self.view.ui.selectDistType.setCurrentIndex(2)
+        else:
+            self.view.ui.lineEdpar1.setText(
+                str(self.model.rnds.param))
+            self.view.ui.lineEdpar2.setText("")
+            self.view.ui.selectDistType.setCurrentIndex(2)
+        
+    @pyqtSlot(str)
+    def _select_dist_type(self, value):
+        if self.view.activeParamTune < len(self.model.rndUs):
+            if value == "Normal":
+                self.model.rndUs[self.view.activeParamTune] = \
+                    NormVar([self.view.activePar1, self.view.activePar2])
+            if value == "Uniform":
+                self.model.rndUs[self.view.activeParamTune] = \
+                    UnifVar([self.view.activePar1, self.view.activePar2])
+            if value == "Half-Normal":
+                self.model.rndUs[self.view.activeParamTune] = \
+                    HalfNormVar(self.view.activePar1)
+        else:
+            self.model.rnds = HalfNormVar(self.view.activePar1)
+            if (value == "Normal") | (value == "Uniform") :
+                print("Error parameter should only be Half-Normal")  
+
+    @pyqtSlot(float)
+    def _setEdpar1(self, value):
+        self.view.activePar1 = value
+
+    @pyqtSlot(float)
+    def _setEdpar2(self, value):
+        self.view.activePar2 = value
 
     @pyqtSlot(int)
     def _select_dimR(self, value):
@@ -352,19 +513,16 @@ class ControllerUI(QObject):
         self.view.ui.selectDim2.setCurrentIndex(
             int(self.view.ui.selectDim1.currentIndex())+1)
         self.draw_plot_tabs()
-        print("MAP" + str(self.model.MCalgo.MAP))
-
-
-###############################################################################
-### TEMPLATE CANVAS OBJECT
-###############################################################################
-
-class MplCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = self.fig.add_subplot(111)
-        super().__init__(self.fig)
-        self.setParent(parent)
+        if self.model.type_inf: inf_res = "Block Step"
+        else: inf_res = "Single Step"
+        formatted_list = [f"{x:.2f}" for x in self.model.MCalgo.MAP]
+        self.view.ui.labelResult1.setText(
+            inf_res + "\n" +
+            "Acceptation:\n" +
+            str([f"{x:.2f}" for x in self.model.MCalgo.tacc]) + 
+            "\n" +
+            "MAP:\n" +
+            "\n".join(formatted_list))
 
 
 ###############################################################################
@@ -375,6 +533,7 @@ class ComputeWorker(QObject):
     finished = pyqtSignal()
     # progress = pyqtSignal(int)
     ## TO-DO add progress bar (need extract current i from MCalgo.runInference)
+    # or pass a callback (as a signal emitter)
 
     def __init__(self, model):
         super().__init__()
@@ -393,31 +552,3 @@ class ComputeWorker(QObject):
         self.model.post_treat_chains()
         self.finished.emit()
     
-    # def regr_fit(self):
-    #     if self.model.selected_model != "SVR":
-    #         if self.model.selected_model == "Linear Polynomial":
-    #             self.model.fitreg_model = LinearRegression()
-    #         elif self.model.selected_model == "ElasticNet":
-    #             self.model.fitreg_model = ElasticNet()
-    #         elif self.model.selected_model == "RandomForest":
-    #             self.model.fitreg_model = RandomForestRegressor()
-    #         Xfit = self.model.data_case.xmes
-    #         Yfit = self.model.data_case.ymes
-    #         self.model.fitreg_model.fit(Xfit, Yfit)
-    #         self.model.yreg_pred = self.model.fitreg_model.predict(
-    #             self.model.data_case.xmes)
-    #     elif self.model.selected_model == "SVR":
-    #         self.model.fitreg_model = SVR(
-    #             kernel='rbf', C=1.0, epsilon=0.1, gamma='scale')
-    #         scaler_X = StandardScaler()
-    #         scaler_y = StandardScaler()
-    #         X_train_scaled = scaler_X.fit_transform(self.model.data_case.xmes)
-    #         y_train_scaled = scaler_y.fit_transform(
-    #             self.model.data_case.ymes.reshape(-1, 1)).ravel()
-    #         self.model.fitreg_model.fit(X_train_scaled, y_train_scaled)
-    #         y_pred_scaled = self.model.fitreg_model.predict(
-    #             X_train_scaled)
-    #         self.model.yreg_pred = scaler_y.inverse_transform(
-    #             y_pred_scaled.reshape(-1, 1)).ravel()
-
-

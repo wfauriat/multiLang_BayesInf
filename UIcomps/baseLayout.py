@@ -1,9 +1,12 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1000, 700)
+        MainWindow.resize(1000, 800)
 
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
@@ -11,7 +14,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
-        MainWindow.setMinimumSize(QtCore.QSize(1000, 700))
+        MainWindow.setMinimumSize(QtCore.QSize(1000, 800))
 
 
         self.centralWidget = QtWidgets.QWidget(parent=MainWindow)
@@ -273,7 +276,6 @@ class Ui_MainWindow(object):
         self.selectBayesModel.setObjectName("selectBayesModel")
         self.selectBayesModel.addItem("")
         self.selectBayesModel.addItem("")
-        self.selectBayesModel.addItem("")
 
 
         self.layoutBayesModel.addWidget(self.selectBayesModel)
@@ -314,7 +316,6 @@ class Ui_MainWindow(object):
 
         self.selectDistType = QtWidgets.QComboBox(parent=self.bayesTuningPanel)
         self.selectDistType.setObjectName("selectDistType")
-        self.selectDistType.addItem("")
         self.selectDistType.addItem("")
         self.selectDistType.addItem("")
         self.selectDistType.addItem("")
@@ -421,6 +422,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.radioStepType1.setFont(font)
+        self.radioStepType1.setChecked(True)
         self.radioStepType1.setObjectName("radioStepType1")
 
 
@@ -432,6 +434,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.radioStepType2.setFont(font)
+        self.radioStepType1.setChecked(False)
         self.radioStepType2.setObjectName("radioStepType2")
 
 
@@ -531,8 +534,29 @@ class Ui_MainWindow(object):
         self.tab_4.setStyleSheet("")
         self.tab_4.setObjectName("tab_4")
 
-
         self.tabViewPanel.addTab(self.tab_4, "")
+        self.tab_5 = QtWidgets.QWidget()
+        self.tab_5.setStyleSheet("")
+        self.tab_5.setObjectName("tab_5")
+
+
+        self.tab1Layout = QtWidgets.QVBoxLayout(self.tab)
+        self.tab2Layout = QtWidgets.QVBoxLayout(self.tab_2)
+        self.tab3Layout = QtWidgets.QVBoxLayout(self.tab_3)
+        self.tab4Layout = QtWidgets.QVBoxLayout(self.tab_4)
+        self.tab5Layout = QtWidgets.QVBoxLayout(self.tab_5)
+        self.sc1 = MplCanvas(self.tab, width=5, height=4, dpi=100)
+        self.sc2 = MplCanvas(self.tab_2, width=5, height=4, dpi=100)
+        self.sc3 = MplCanvas(self.tab_3, width=5, height=4, dpi=100)
+        self.sc4 = MplCanvas(self.tab_4, width=5, height=4, dpi=100)
+        self.sc5 = MplCanvas(self.tab_5, width=5, height=4, dpi=100)
+        self.tab1Layout.addWidget(self.sc1)
+        self.tab2Layout.addWidget(self.sc2)
+        self.tab3Layout.addWidget(self.sc3)
+        self.tab4Layout.addWidget(self.sc4)
+        self.tab5Layout.addWidget(self.sc5)
+
+        self.tabViewPanel.addTab(self.tab_5, "")
         self.layoutPanel.addWidget(self.tabViewPanel)
         self.subDisplayPanel = QtWidgets.QFrame(parent=self.displayPanel)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Preferred)
@@ -627,8 +651,12 @@ class Ui_MainWindow(object):
         self.checkLegend5 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
         self.checkLegend5.setObjectName("checkLegend5")
         self.checkLegend5.setChecked(True)
-
         self.layoutControlVert1.addWidget(self.checkLegend5)
+        self.checkLegend6 = QtWidgets.QCheckBox(parent=self.legendSelectPanel)
+        self.checkLegend6.setObjectName("checkLegend6")
+        self.checkLegend6.setChecked(False)
+        self.layoutControlVert1.addWidget(self.checkLegend6)
+
         self.layoutDisplayFineControl.addWidget(self.legendSelectPanel, 1, 0, 1, 1)
         self.rangeSelectionPanel = QtWidgets.QFrame(parent=self.displayFineControl)
         self.rangeSelectionPanel.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
@@ -783,30 +811,23 @@ class Ui_MainWindow(object):
         self.inferenceView.setObjectName("inferenceView")
 
 
+        self.resultPanel = QtWidgets.QVBoxLayout(self.inferenceView)
+        self.resultPanel.setObjectName("verticalLayout")
         self.labelResults = QtWidgets.QLabel(parent=self.inferenceView)
-        self.labelResults.setGeometry(QtCore.QRect(10, 10, 120, 20))
         self.labelResults.setStyleSheet("text-decoration: underline;\n"
-"font: 9pt \"Sans Serif\";")
+                "font: 9pt \"Sans Serif\";")
         self.labelResults.setObjectName("labelResults")
-
-
+        self.resultPanel.addWidget(self.labelResults)
         self.labelResult1 = QtWidgets.QLabel(parent=self.inferenceView)
-        self.labelResult1.setGeometry(QtCore.QRect(10, 40, 200, 17))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.labelResult1.sizePolicy().hasHeightForWidth())
+        self.labelResult1.setSizePolicy(sizePolicy)
         self.labelResult1.setStyleSheet("")
+        self.labelResult1.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.labelResult1.setObjectName("labelResult1")
-
-
-        self.labelResult2 = QtWidgets.QLabel(parent=self.inferenceView)
-        self.labelResult2.setGeometry(QtCore.QRect(10, 65, 200, 17))
-        self.labelResult2.setStyleSheet("")
-        self.labelResult2.setObjectName("labelResult2")
-
-
-        self.labelResult3 = QtWidgets.QLabel(parent=self.inferenceView)
-        self.labelResult3.setGeometry(QtCore.QRect(10, 90, 200, 17))
-        self.labelResult3.setStyleSheet("")
-        self.labelResult3.setObjectName("labelResult3")
-
+        self.resultPanel.addWidget(self.labelResult1)
 
         self.layoutDisplaySubPanel.addWidget(self.inferenceView)
         self.layoutPanel.addWidget(self.subDisplayPanel)
@@ -823,6 +844,8 @@ class Ui_MainWindow(object):
 
         
         MainWindow.setStatusBar(self.statusbar)
+
+
 
         self.retranslateUi(MainWindow)
         self.tabViewPanel.setCurrentIndex(0)
@@ -848,14 +871,12 @@ class Ui_MainWindow(object):
         self.pushParamReg.setText(_translate("MainWindow", "Parameters"))
         self.pushFitReg.setText(_translate("MainWindow", "Fit Model"))
         self.labelBayesModel.setText(_translate("MainWindow", "Bayesian Model Selection"))
-        self.selectBayesModel.setItemText(0, _translate("MainWindow", "Model Form"))
+        self.selectBayesModel.setItemText(0, _translate("MainWindow", "Linear Gaussian"))
         self.selectBayesModel.setItemText(1, _translate("MainWindow", "Linear Gaussian Fixed StdDev"))
-        self.selectBayesModel.setItemText(2, _translate("MainWindow", "Linear Gaussian"))
         self.selectParamTune.setItemText(0, _translate("MainWindow", "Parameter"))
-        self.selectDistType.setItemText(0, _translate("MainWindow", "Type"))
-        self.selectDistType.setItemText(1, _translate("MainWindow", "Normal"))
-        self.selectDistType.setItemText(2, _translate("MainWindow", "Uniform"))
-        self.selectDistType.setItemText(3, _translate("MainWindow", "Half-Normal"))
+        self.selectDistType.setItemText(0, _translate("MainWindow", "Normal"))
+        self.selectDistType.setItemText(1, _translate("MainWindow", "Uniform"))
+        self.selectDistType.setItemText(2, _translate("MainWindow", "Half-Normal"))
         self.pushParamAuto.setText(_translate("MainWindow", "Auto"))
         self.lineEdpar1.setPlaceholderText(_translate("MainWindow", "Hyp1"))
         self.lineEdpar2.setPlaceholderText(_translate("MainWindow", "Hyp2"))
@@ -871,12 +892,14 @@ class Ui_MainWindow(object):
         self.tabViewPanel.setTabText(self.tabViewPanel.indexOf(self.tab_2), _translate("MainWindow", "Posterior parameters"))
         self.tabViewPanel.setTabText(self.tabViewPanel.indexOf(self.tab_3), _translate("MainWindow", "Fit / Error"))
         self.tabViewPanel.setTabText(self.tabViewPanel.indexOf(self.tab_4), _translate("MainWindow", "Chains"))
+        self.tabViewPanel.setTabText(self.tabViewPanel.indexOf(self.tab_5), _translate("MainWindow", "Dist1D"))
         self.labelDisplay.setText(_translate("MainWindow", "Display Control"))
         self.checkLegend1.setText(_translate("MainWindow", "Train Data"))
         self.checkLegend2.setText(_translate("MainWindow", "Test Data"))
         self.checkLegend3.setText(_translate("MainWindow", "Post MAP"))
         self.checkLegend4.setText(_translate("MainWindow", "Post Dist Y"))
         self.checkLegend5.setText(_translate("MainWindow", "Regressor"))
+        self.checkLegend6.setText(_translate("MainWindow", "Prior"))
         self.lineEdXmax.setPlaceholderText(_translate("MainWindow", "xmax"))
         self.pushAutoRange.setText(_translate("MainWindow", "Auto"))
         self.labelRange.setText(_translate("MainWindow", "Range"))
@@ -895,5 +918,17 @@ class Ui_MainWindow(object):
         self.selectDim1.setPlaceholderText(_translate("MainWindow", "Scatter1"))
         self.labelResults.setText(_translate("MainWindow", "Inference Results"))
         self.labelResult1.setText(_translate("MainWindow", "Inference details"))
-        self.labelResult2.setText(_translate("MainWindow", "MAP / Model SnapShot"))
-        self.labelResult3.setText(_translate("MainWindow", "Fit Quality"))
+
+
+###############################################################################
+### TEMPLATE CANVAS OBJECT
+###############################################################################
+
+class MplCanvas(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
+        self.twaxes = self.axes.twinx()
+        self.twaxes.set_yticks([])
+        super().__init__(self.fig)
+        self.setParent(parent)
