@@ -1,12 +1,14 @@
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import (QMainWindow, QFileDialog)
 from PyQt5.QtGui import QDoubleValidator
 
 from multiLang_BayesInf.UIcomps.baseLayout import Ui_MainWindow
 
-from multiLang_BayesInf.cases_data.data_cases_def import PolynomialCase, HousingCase
+from multiLang_BayesInf.cases_data.data_cases_def import (
+    VoidCase, PolynomialCase, HousingCase)
 
 from multiLang_BayesInf.pyBI.base import (
     UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar)
@@ -37,6 +39,7 @@ class ModelUI(QObject):
         self.postpar = None
         self.postY = None
         self.data_case = None
+        self.custom_case = VoidCase()
         self.rnds = None
         self.rndUs = None
         self.obsvar = None
@@ -68,15 +71,32 @@ class ModelUI(QObject):
                     cond_var=self.data_case.xmes)
             self.bstart = np.array([0]*9 + [80000])
 
+        elif self.data_selected_case == "Custom":
+            self.data_case = self.custom_case
+            def form_fit(x, b):
+                if x.ndim == 1:
+                    x = x[np.newaxis, :]
+                b = np.asarray(b)
+                return b[0] + x @ b[1:] 
+            self.data_case.form_fit = form_fit
+            ymax = np.max(self.data_case.ymes)
+            xdims = self.data_case.xmes.shape[1]
+            self.rndUs = [NormVar([0, ymax]) for _ in range(xdims+1)]
+            self.rnds = HalfNormVar(param=ymax)
+            self.obsvar = ObsVar(obs=np.c_[self.data_case.ymes],
+            prev_model=self.data_case.form_fit, 
+            cond_var=self.data_case.xmes)
+            self.bstart = np.array([0]*(xdims+1) + [ymax])
+
     def post_treat_chains(self):
         idxrdn = np.random.permutation(
             np.minimum(self.MCalgo.cut_chain.shape[0],100))
         postpar_red = self.postpar[idxrdn]
         self.postY = np.array([[self.data_case.form_fit(
-                            np.r_[[xx]], bb)[0] for bb in postpar_red] \
+                            np.r_[[xx]], bb)[0] for bb in postpar_red[:,:-1]] \
                         for xx in self.data_case.xmes])
         self.postMAP = np.array([self.data_case.form_fit(np.r_[[xx]],
-                             self.MCalgo.MAP) for xx in self.data_case.xmes])
+                             self.MCalgo.MAP[:-1]) for xx in self.data_case.xmes])
         self.postYeps = self.postY + np.random.randn(100) * postpar_red[:,-1]
 
     def regr_fit(self):
@@ -120,8 +140,11 @@ class ViewMainUI(QMainWindow):
     NMCMCSignal = pyqtSignal(int)
     NthinSignal = pyqtSignal(int)
     NburnSignal = pyqtSignal(int)
+    saveFileSignal = pyqtSignal()
 
     selectCaseSignal = pyqtSignal(str)
+    openFileSignal = pyqtSignal()
+
     selectRegModelSignal = pyqtSignal(str)
 
     selectParamTuneSignal = pyqtSignal(int)
@@ -135,7 +158,6 @@ class ViewMainUI(QMainWindow):
 
     radio1Signal = pyqtSignal(bool)
     radio2Signal = pyqtSignal(bool)
-
 
     def __init__(self):
         super().__init__()
@@ -162,8 +184,11 @@ class ViewMainUI(QMainWindow):
         self.ui.lineEdMC3.textChanged.connect(self._handle_Nburn)
         self.ui.radioStepType1.toggled.connect(self._handle_radio1)
         self.ui.radioStepType2.toggled.connect(self._handle_radio2)
-        # reg panel
+        self.ui.pushExport.clicked.connect(self._handle_pushExport)
+        # case panel
         self.ui.selectDataCase.activated.connect(self._handle_select_case)
+        self.ui.pushImportData.clicked.connect(self._handle_pushImport)
+        # reg panel
         self.ui.selectRegMod.activated.connect(self._handle_select_regmod)
         self.ui.pushFitReg.clicked.connect(self._handle_pushFitReg)
         # bayes panel
@@ -272,6 +297,12 @@ class ViewMainUI(QMainWindow):
     def _handel_checkLegend6(self, value):
         self.check6 = value
 
+    def _handle_pushImport(self):
+        self.openFileSignal.emit()
+    def _handle_pushExport(self):
+        self.saveFileSignal.emit()
+
+
 ###############################################################################
 ### CONTROLLER OBJECT
 ###############################################################################
@@ -291,8 +322,10 @@ class ControllerUI(QObject):
         self.view.NburnSignal.connect(self._setNburn)
         self.view.radio1Signal.connect(self._setradio1)
         self.view.radio2Signal.connect(self._setradio2)
+        self.view.saveFileSignal.connect(self.saveFileNameDialog)
 
         self.view.selectCaseSignal.connect(self._select_case)
+        self.view.openFileSignal.connect(self.openFileNameDialog)
 
         self.view.selectRegModelSignal.connect(self._select_reg_model)
         self.view.fitRegSignal.connect(self._handle_pushFitReg)
@@ -425,12 +458,56 @@ class ControllerUI(QObject):
         self.view.ui.radioStepType1.setChecked(not(value))
         self.view.ui.radioStepType2.setChecked(value)
 
+    def saveFileNameDialog(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.view, "Save File", "", "CSV Files (*.csv)")
+        if file_path:
+            self._export_result(file_path)
+
     @pyqtSlot(str)
     def _select_case(self, value):
         self.view.ui.selectDimR.setCurrentIndex(0)
         self.model.data_selected_case = value
         self.model.load_case()
         self.view._update_param_selection(len(self.model.rndUs)+1)
+
+    def openFileNameDialog(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            self.view,
+            "Open Data File", "", "CSV Files (*.csv);;All Files (*.*)",
+            options=options
+        )
+        if file_name:
+            self._handle_custom_case(file_name)
+
+    def _handle_custom_case(self, file_name):
+            imported_data = np.loadtxt(file_name, skiprows=0, delimiter=",")
+            if self.view.ui.selectDataCase.findText("Custom") == -1:
+                self.view.ui.selectDataCase.addItem("Custom")
+            else: self.view.ui.selectDataCase.setItemText(2,"Custom")
+            self.model.data_selected_case = "Custom"
+            XX = imported_data[:,:-1]
+            yy = imported_data[:,-1]
+            X_train, X_test, y_train, y_test = train_test_split(
+                XX, yy, test_size=0.95, random_state=42)
+            self.X_train = X_train
+            self.y_train = y_train
+            self.X_test = X_test
+            self.y_test = y_test
+            self.model.custom_case.xmes = X_train
+            self.model.custom_case.ymes = y_train
+            self.model.custom_case.X_test = X_test
+            self.model.custom_case.y_test = y_test
+
+    def _export_result(self, file_name):
+        np.savetxt(file_name[:-4] + "_par.csv",
+                    np.vstack([self.model.postpar, 
+                    self.model.MCalgo.MAP]))
+        np.savetxt(file_name[:-4] + "_postY.csv",
+                   self.model.postY)
+        np.savetxt(file_name[:-4] + "_postYeps.csv",
+                   self.model.postYeps)
 
     @pyqtSlot(str)
     def _select_reg_model(self, value):

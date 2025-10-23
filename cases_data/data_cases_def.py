@@ -5,6 +5,19 @@ from PIL import Image
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
+class VoidCase():
+    def __init__(self):
+        self.xmes = np.atleast_2d(np.zeros(1))
+        self.ymes = np.zeros(1)
+        def form_fit(x, b):
+            if x.ndim == 1:
+                x = x[np.newaxis, :]
+            b = np.asarray(b)
+            return b[0] + x @ b[1:] 
+        self.form_fit = form_fit
+        self.X_test = self.xmes
+        self.y_test = self.ymes
+
 class PolynomialCase():
     def __init__(self):
         

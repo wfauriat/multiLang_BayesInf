@@ -242,3 +242,38 @@ if casep == 2:
     ax.scatter(ypost[:,0], ypost[:,1], marker='x', color='k')
     ax.scatter(yrnd[:,0], yrnd[:,1], marker='o', color='b')
 
+
+
+#%%
+    
+# def modelfit1(x,b):
+#     return np.atleast_2d(b[0] + b[1]*x[:,0] + b[2]*x[:,0]**2)[0]
+# # def modelfit2(x, b):
+# #     x = np.atleast_2d(x)
+# #     b = np.asarray(b)
+# #     return np.atleast_2d(b[0] + x @ b[1:])[0]
+# def modelfit2(x, b):
+#     if x.ndim == 1:
+#         x = x[np.newaxis, :]
+#     b = np.asarray(b)
+#     y =  y = b[0] + x @ b[1:] 
+#     return y
+#     # return np.squeeze(y)
+
+# ymes1 = modelfit1(xmes, b0)
+# ymes2 = modelfit2(xmes, b0[:-1])
+
+# print(ymes1)
+# print(ymes2)
+
+# postpar = MCalgo.cut_chain
+
+
+# %%
+
+# postY1 = np.array([[modelfit1(np.r_[[xx]], bb)[0] for bb in postpar[:,:-1]] \
+#                         for xx in xmes])
+# postY2 = np.array([[modelfit2(np.r_[[xx]], bb)[0] for bb in postpar[:,:-1]] \
+#                         for xx in xmes])
+# print(postY1.shape)
+# print(postY2.shape)
