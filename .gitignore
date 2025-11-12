@@ -1,0 +1,7 @@
+*__pycache__
+
+*.vscode
+
+tex
+
+cases_data/.csv
