@@ -19,8 +19,6 @@ from UIcomps.baseLayout import Ui_MainWindow
 from cases_data.data_cases_def import (
     VoidCase, PolynomialCase, HousingCase)
 
-
-
 from pyBI.base import (
     UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar)
 from pyBI.inference import MHalgo, MHwGalgo
