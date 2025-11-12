@@ -5,14 +5,25 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import (QMainWindow, QFileDialog)
 from PyQt5.QtGui import QDoubleValidator
 
-from multiLang_BayesInf.UIcomps.baseLayout import Ui_MainWindow
+from UIcomps.baseLayout import Ui_MainWindow
 
-from multiLang_BayesInf.cases_data.data_cases_def import (
+# from multiLang_BayesInf.UIcomps.baseLayout import Ui_MainWindow
+
+# from multiLang_BayesInf.cases_data.data_cases_def import (
+#     VoidCase, PolynomialCase, HousingCase)
+
+# from multiLang_BayesInf.pyBI.base import (
+#     UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar)
+# from multiLang_BayesInf.pyBI.inference import MHalgo, MHwGalgo
+
+from cases_data.data_cases_def import (
     VoidCase, PolynomialCase, HousingCase)
 
-from multiLang_BayesInf.pyBI.base import (
+
+
+from pyBI.base import (
     UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar)
-from multiLang_BayesInf.pyBI.inference import MHalgo, MHwGalgo
+from pyBI.inference import MHalgo, MHwGalgo
 
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import ElasticNet

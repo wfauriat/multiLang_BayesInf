@@ -2,8 +2,8 @@ import sys
 from PyQt5.QtWidgets import QApplication
 # from PyQt5 import uic 
 
-from multiLang_BayesInf.UIcomps.componentsGUI import ModelUI, ViewMainUI, ControllerUI
-# from UIcomps.componentsGUI import ModelUI, ViewMainUI, ControllerUI
+# from multiLang_BayesInf.UIcomps.componentsGUI import ModelUI, ViewMainUI, ControllerUI
+from UIcomps.componentsGUI import ModelUI, ViewMainUI, ControllerUI
 
 
 if __name__ == '__main__':
