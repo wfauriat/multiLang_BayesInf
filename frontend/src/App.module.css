@@ -1,0 +1,16 @@
+/* h2 {
+  margin: 0 auto;
+  padding-top: 1em;
+  width: 80%;
+  text-align: center;
+  border: solid 1px red;
+} */
+
+.HeaderApp {
+  /* border: 1px solid red; */
+  text-align: center;
+  width: 80%;
+  margin: 0 auto;
+  padding-bottom: 2em;
+  padding-top: 0.5em;
+}

@@ -18,6 +18,7 @@ def set_NMCMC():
     if not request.is_json:
         return jsonify({"error": "Missing JSON in request"}), 400
     data = request.get_json()
+    print(data)
     NMCMC = data.get('NMCMC')
     model.NMCMC = NMCMC
     return jsonify({'NMCMC': model.NMCMC}), 200
