@@ -6,11 +6,92 @@
   border: solid 1px red;
 } */
 
+body {
+  background-color: black;
+  color: white;
+}
+
 .HeaderApp {
   /* border: 1px solid red; */
   text-align: center;
-  width: 80%;
+  /* width: 80%; */
   margin: 0 auto;
-  padding-bottom: 2em;
+  padding-bottom: 1em;
   padding-top: 0.5em;
+  border-bottom: solid 1px white;
+}
+
+.MainContent{
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  /* border: solid 2px magenta; */
+}
+
+.DefinitionPad{
+  border-right: solid 1px white;
+}
+
+.DefSubPad{
+  padding: 0.5em;
+  border-bottom: solid 1px white;
+}
+
+
+.DisplayPad{
+  display: inline;
+  /* border: solid 1px red; */
+}
+
+.CanvasPad{
+  border: solid 1px white;
+  padding-left: 0.5em;
+  min-height: 600px;
+}
+
+.ControlPad{
+  min-height: 300px;
+  padding-left: 0.5em;
+}
+
+.FourButtonArray{
+  /* border: solid 1px orange; */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding: 0.2em;
+}
+
+.TwoButtonArray{
+  /* border: solid 1px yellow; */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  place-items: center;
+  padding: 0.2em;
+}
+
+
+.FourButtonArray button{
+  width: 80%;
+  margin: 0 auto 0.2em;
+  display: block;
+
+}
+
+.FourButtonArray input{
+  width: 80%;
+  margin: 0 auto 0.2em;
+  display: block;
+}
+
+.TwoButtonArray button{
+  display: block;
+  margin: 0 auto;
+  width: 80%;
+}
+
+select {
+  display: block;
+  width: 80%;
+  margin: auto;
+  text-align: center;
 }

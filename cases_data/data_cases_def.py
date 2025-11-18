@@ -44,10 +44,10 @@ class PolynomialCase():
 
 class HousingCase():
     def __init__(self):
-        img = Image.open('multiLang_BayesInf/cases_data/cal_map.jpg')
-        datacsv = pd.read_csv('multiLang_BayesInf/cases_data/cal_housing.data',
+        img = Image.open('./cases_data/cal_map.jpg')
+        datacsv = pd.read_csv('./cases_data/cal_housing.data',
                                header=None, dtype='f8')
-        tmp = np.loadtxt('multiLang_BayesInf/cases_data/cal_housing.domain',
+        tmp = np.loadtxt('./cases_data/cal_housing.domain',
                           delimiter=':', dtype='U20')
 
         df = pd.DataFrame(datacsv.values, columns=tmp[:,0])
