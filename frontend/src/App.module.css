@@ -48,6 +48,10 @@ body {
   min-height: 600px;
 }
 
+.CanvasView{
+  padding-right: 4em;
+}
+
 .ControlPad{
   min-height: 300px;
   padding-left: 0.5em;
@@ -87,6 +91,11 @@ body {
   display: block;
   margin: 0 auto;
   width: 80%;
+}
+
+.OneLineField {
+  display: flex;
+  justify-content: space-evenly;
 }
 
 select {

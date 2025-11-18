@@ -7,6 +7,7 @@ from pyBI.inference import MHalgo
 model = ModelUI()
 
 bp_inf = Blueprint('inf', __name__, url_prefix='/inf')
+bp_case = Blueprint('case', __name__, url_prefix='/case')
 bp_comp = Blueprint('comp', __name__, url_prefix='') 
 
 @bp_inf.route('/NMCMC', methods=['GET'])
@@ -23,6 +24,19 @@ def set_NMCMC():
     model.NMCMC = NMCMC
     return jsonify({'NMCMC': model.NMCMC}), 200
 
+@bp_case.route('/polynomial')
+def set_casePolynomial():
+    model.data_selected_case = "Polynomial"
+    model.load_case()
+    print(model.data_selected_case)
+    return jsonify({'case': model.data_selected_case}), 200
+
+@bp_case.route('/housing')
+def set_caseHousing():
+    model.data_selected_case = "Housing"
+    model.load_case()
+    print(model.data_selected_case)
+    return jsonify({'case': model.data_selected_case}), 200
 
 @bp_comp.route('/compute')
 def compute():

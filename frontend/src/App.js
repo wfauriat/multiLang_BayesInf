@@ -1,11 +1,15 @@
-import {useState} from "react";
+import {useState } from 'react';
 import styles from './App.module.css'
 import MatrixPlot from "./components/MatrixPlot";
 
 function App() {
 
   const ENDPOINT = "http://127.0.0.1:5000/" // not used if proxy set to localhost:5000
-  const [value, setValue] = useState('');
+  const [NMCMC, setNMCMC] = useState('');
+  const [Nthin, setNthin] = useState('');
+  const [Ntune, setNtune] = useState('');
+
+  const [chainData, setChainData] = useState(null);
 
   const handleSubmit = async () => {
     try {
@@ -15,11 +19,11 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ "NMCMC": parseFloat(value) }),
+        body: JSON.stringify({ "NMCMC": parseFloat(NMCMC) }),
       });
       if (response.ok) {
         console.log("POST SUCCESFUL")
-        console.log(value)
+        console.log(NMCMC)
       }
     } catch (error) {
       console.log(error.message);
@@ -29,7 +33,8 @@ function App() {
   const handleCompute = async () => {
     const response = await fetch(ENDPOINT + "compute");
     const data = await response.json();
-    console.log(data.chain[0])
+    setChainData(data)
+    console.log(chainData)
   };
 
     return (
@@ -78,31 +83,63 @@ function App() {
 
             <div className={styles.DefSubPad}>
               <h3>Inference Configuration</h3>
-              <label style={{paddingRight: "1em"}}>
-              NMCMC
-              </label>
-              <input type="text" value={value} style={{marginRight: "1em"}}
-              placeholder="NMCMC" onChange={(e) => setValue(e.target.value)} required>
-              </input>
-              <button onClick={handleSubmit} >
-                Send
+              <div className={styles.OneLineField}>
+                <label style={{paddingRight: "1em"}}>
+                NMCMC
+                </label>
+                <input type="text" value={NMCMC} style={{marginRight: "1em", width:"30%"}}
+                  placeholder="NMCMC" onChange={(e) => setNMCMC(e.target.value)} required>
+                </input>
+                <button onClick={handleSubmit} >
+                  Send
+                </button>
+              </div>
+              <div className={styles.OneLineField}>
+                <label style={{paddingRight: "1em"}}>
+                Nthin
+                </label>
+                <input type="text" value={Nthin} style={{marginRight: "1em", width:"30%"}}
+                  placeholder="Nthin">
+                </input>
+                <button>
+                  Send
+                </button>
+              </div>
+              <div className={styles.OneLineField}>
+                <label style={{paddingRight: "1em"}}>
+                Nthin
+                </label>
+                <input type="text" value={Ntune} style={{marginRight: "1em", width:"30%"}}
+                  placeholder="Ntune">
+                </input>
+                <button>
+                  Send
+                </button>
+              </div>
+              <div>
+                <button
+                onClick={handleCompute}>
+                  Compute
               </button>
-              <button
-              onClick={handleCompute}>
-              Compute
-              </button>
+              </div>
             </div>
           </div>
 
           <div className={styles.DisplayPad}>
             <div className={styles.CanvasPad}>
               <h2>Canvas Pad</h2>
-              <div>
-                <MatrixPlot />
-              </div> 
+              <div className={styles.CanvasView}>
+                {chainData && <MatrixPlot datain={chainData}/>}
+              </div>
             </div>
             <div className={styles.ControlPad}>
               <h2>Control Pad</h2>
+            </div>
+            <div>
+              <select>
+                <option>0</option>
+                <option>1</option>
+              </select>
             </div>
           </div>
 

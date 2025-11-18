@@ -9,6 +9,7 @@ def create_app():
     from . import model
     app.register_blueprint(model.bp_inf)
     app.register_blueprint(model.bp_comp)
+    app.register_blueprint(model.bp_case)
 
     @app.route('/')
     def home():
