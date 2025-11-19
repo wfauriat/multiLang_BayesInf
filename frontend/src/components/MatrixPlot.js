@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
-export default function MatrixPlot({ datain }) {
+export default function MatrixPlot({ datain, dimR }) {
+
   // Transform the data: extract first column from the 1000x4 array
   const chartData = useMemo(() => {
     // Safety checks
@@ -21,7 +22,10 @@ export default function MatrixPlot({ datain }) {
       col4: row[3]   // Fourth column (optional)
     }));
   }, [datain]);
-  
+
+  const getCol = (i) => `col${i+1}`;
+  console.log(getCol(dimR));
+    
   // If no data, show a message
   if (chartData.length === 0) {
     return (
@@ -29,7 +33,7 @@ export default function MatrixPlot({ datain }) {
         <p>No data available to plot</p>
       </div>
     );
-  }
+  };
   
   return (
     <div style={{ width: '100%', padding: '20px' }}>
@@ -55,7 +59,7 @@ export default function MatrixPlot({ datain }) {
           {/* Plot first column */}
           <Line 
             type="monotone"
-            dataKey="col1" 
+            dataKey={getCol(dimR)}
             name="Column 1"
             stroke="#1c7e29ff" 
             strokeWidth={1}

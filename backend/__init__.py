@@ -10,6 +10,7 @@ def create_app():
     app.register_blueprint(model.bp_inf)
     app.register_blueprint(model.bp_comp)
     app.register_blueprint(model.bp_case)
+    app.register_blueprint(model.bp_visu)
 
     @app.route('/')
     def home():

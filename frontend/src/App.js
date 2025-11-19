@@ -1,6 +1,7 @@
 import {useState } from 'react';
 import styles from './App.module.css'
 import MatrixPlot from "./components/MatrixPlot";
+import Tabs from "./components/Tabs";
 
 function App() {
 
@@ -8,27 +9,45 @@ function App() {
   const [NMCMC, setNMCMC] = useState('');
   const [Nthin, setNthin] = useState('');
   const [Ntune, setNtune] = useState('');
-
+  const [selectedCase, setSelectedCase] = useState('');
+  const [selectedDimR, setSelectedDimR] = useState(parseInt(0));
   const [chainData, setChainData] = useState(null);
 
-  const handleSubmit = async () => {
+  const handlePostMCMC = async () => {
     try {
-      // const response = await fetch("inf/NMCMC", {
       const response = await fetch(ENDPOINT + "inf/NMCMC", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ "NMCMC": parseFloat(NMCMC) }),
       });
       if (response.ok) {
-        console.log("POST SUCCESFUL")
-        console.log(NMCMC)
+        console.log("POST SUCCESSFUL", NMCMC)
       }
     } catch (error) {
       console.log(error.message);
     }
   };
+
+  const handleSelectCase = async (e) => {
+    const value = e.target.value;
+    setSelectedCase(value);
+      try {
+      const res = await fetch(ENDPOINT + "case/select", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ selectedItem: value }),
+      });
+      if (res.ok) {console.log("POST SUCCESSFUL", value)}
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleSelectDimR = async (e) => {
+    const value = parseInt(e.target.value);
+    setSelectedDimR(value);
+  };
+
 
   const handleCompute = async () => {
     const response = await fetch(ENDPOINT + "compute");
@@ -48,9 +67,9 @@ function App() {
             <div className={styles.DefSubPad}>
               <h3>Data Case Selection</h3>
               <div>
-                <select>
-                  <option>Polynomial</option>
-                  <option>Housing</option>
+                <select value={selectedCase} onChange={handleSelectCase}>
+                  <option value="Polynomial">Polynomial</option>
+                  <option value="Housing">Housing</option>
                 </select>
                 <div className={styles.FourButtonArray}>
                   <button>Custom</button>
@@ -90,7 +109,7 @@ function App() {
                 <input type="text" value={NMCMC} style={{marginRight: "1em", width:"30%"}}
                   placeholder="NMCMC" onChange={(e) => setNMCMC(e.target.value)} required>
                 </input>
-                <button onClick={handleSubmit} >
+                <button onClick={handlePostMCMC} >
                   Send
                 </button>
               </div>
@@ -98,7 +117,8 @@ function App() {
                 <label style={{paddingRight: "1em"}}>
                 Nthin
                 </label>
-                <input type="text" value={Nthin} style={{marginRight: "1em", width:"30%"}}
+                <input type="text" value={Nthin} style={{marginRight: "1em", width:"30%"}} 
+                  onChange={(e) => setNthin(e.target.value)}
                   placeholder="Nthin">
                 </input>
                 <button>
@@ -110,6 +130,7 @@ function App() {
                 Nthin
                 </label>
                 <input type="text" value={Ntune} style={{marginRight: "1em", width:"30%"}}
+                  onChange={(e) => setNtune(e.target.value)}
                   placeholder="Ntune">
                 </input>
                 <button>
@@ -123,22 +144,28 @@ function App() {
               </button>
               </div>
             </div>
+              <div>
+                <Tabs />
+              </div>
           </div>
 
           <div className={styles.DisplayPad}>
             <div className={styles.CanvasPad}>
               <h2>Canvas Pad</h2>
               <div className={styles.CanvasView}>
-                {chainData && <MatrixPlot datain={chainData}/>}
+                {chainData && <MatrixPlot datain={chainData} dimR={selectedDimR}/>}
               </div>
             </div>
             <div className={styles.ControlPad}>
               <h2>Control Pad</h2>
             </div>
             <div>
-              <select>
-                <option>0</option>
-                <option>1</option>
+              Dimension selection
+              <select value={selectedDimR} onChange={handleSelectDimR} style={{width:"30%", display:"inline"}}>
+                <option value={0}>0</option>
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
               </select>
             </div>
           </div>
