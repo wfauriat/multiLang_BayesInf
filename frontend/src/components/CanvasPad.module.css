@@ -1,0 +1,10 @@
+
+.CanvasPad{
+  border: solid 1px white;
+  padding-left: 0.5em;
+  min-height: 600px;
+}
+
+.CanvasView{
+  padding-right: 4em;
+}

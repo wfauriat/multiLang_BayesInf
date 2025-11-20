@@ -1,30 +1,30 @@
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
-export default function MatrixPlot({ datain, dimR }) {
+export default function MatrixPlot({ chainData, selectedDimR }) {
 
   // Transform the data: extract first column from the 1000x4 array
   const chartData = useMemo(() => {
     // Safety checks
-    if (!datain || !datain.chain || !Array.isArray(datain.chain) || datain.chain.length === 0) {
+    if (!chainData || !chainData.chain || !Array.isArray(chainData.chain) || chainData.chain.length === 0) {
       console.log("No valid data to plot");
       return [];
     }
     
-    console.log(`Processing ${datain.chain.length} rows`);
+    console.log(`Processing ${chainData.chain.length} rows`);
     
     // Map each row to a chart-friendly format
-    return datain.chain.map((row, index) => ({
+    return chainData.chain.map((row, index) => ({
       index: index,
       col1: row[0],  // First column
       col2: row[1],  // Second column (optional)
       col3: row[2],  // Third column (optional)
       col4: row[3]   // Fourth column (optional)
     }));
-  }, [datain]);
+  }, [chainData]);
 
   const getCol = (i) => `col${i+1}`;
-  console.log(getCol(dimR));
+  console.log(getCol(selectedDimR));
     
   // If no data, show a message
   if (chartData.length === 0) {
@@ -59,7 +59,7 @@ export default function MatrixPlot({ datain, dimR }) {
           {/* Plot first column */}
           <Line 
             type="monotone"
-            dataKey={getCol(dimR)}
+            dataKey={getCol(selectedDimR)}
             name="Column 1"
             stroke="#1c7e29ff" 
             strokeWidth={1}

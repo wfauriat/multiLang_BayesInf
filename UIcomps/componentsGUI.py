@@ -37,7 +37,7 @@ class ModelUI(QObject):
     def __init__(self):
         super().__init__()
         self.data_selected_case = "Polynomial"
-        self.NMCMC = 20000
+        self.NMCMC = 10000
         self.Nthin = 20
         self.Nburn = 5000
         self.type_inf = 1

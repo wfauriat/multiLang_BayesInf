@@ -1,0 +1,60 @@
+
+.DefinitionPad{
+  border-right: solid 1px white;
+}
+
+.DefSubPad{
+  padding: 0.5em;
+  border-bottom: solid 1px white;
+}
+
+.DisplayPad{
+  display: inline;
+}
+
+
+.FourButtonArray{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding: 0.2em;
+}
+
+.TwoButtonArray{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  place-items: center;
+  padding: 0.2em;
+}
+
+
+.FourButtonArray button{
+  width: 80%;
+  margin: 0 auto 0.2em;
+  display: block;
+
+}
+
+.FourButtonArray input{
+  width: 80%;
+  margin: 0 auto 0.2em;
+  display: block;
+}
+
+.TwoButtonArray button{
+  display: block;
+  margin: 0 auto;
+  width: 80%;
+}
+
+.OneLineField {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+select {
+  display: block;
+  width: 80%;
+  margin: auto;
+  text-align: center;
+}
