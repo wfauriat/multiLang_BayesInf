@@ -6,15 +6,15 @@ export default function MatrixPlot({ chainData, selectedDimR }) {
   // Transform the data: extract first column from the 1000x4 array
   const chartData = useMemo(() => {
     // Safety checks
-    if (!chainData || !chainData.chain || !Array.isArray(chainData.chain) || chainData.chain.length === 0) {
+    if (!chainData || !chainData.chains || !Array.isArray(chainData.chains) || chainData.chains.length === 0) {
       console.log("No valid data to plot");
       return [];
     }
     
-    console.log(`Processing ${chainData.chain.length} rows`);
+    // console.log(`Processing ${chainData.chains.length} rows`);
     
     // Map each row to a chart-friendly format
-    return chainData.chain.map((row, index) => ({
+    return chainData.chains.map((row, index) => ({
       index: index,
       col1: row[0],  // First column
       col2: row[1],  // Second column (optional)
@@ -24,7 +24,7 @@ export default function MatrixPlot({ chainData, selectedDimR }) {
   }, [chainData]);
 
   const getCol = (i) => `col${i+1}`;
-  console.log(getCol(selectedDimR));
+  // console.log(getCol(selectedDimR));
     
   // If no data, show a message
   if (chartData.length === 0) {
@@ -36,12 +36,11 @@ export default function MatrixPlot({ chainData, selectedDimR }) {
   };
   
   return (
-    <div style={{ width: '100%', padding: '20px' }}>
-      {/* <h3>Matrix Plot ({chartData.length} points)</h3> */}
+    <div style={{ width: '100%', padding: '40px'}}>
       
       {/* ResponsiveContainer makes it adapt to parent size */}
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={chartData}>
+      <ResponsiveContainer width="100%" height={450}>
+        <LineChart data={chartData}>  
           <CartesianGrid strokeDasharray="3 3" />
           
           <XAxis 

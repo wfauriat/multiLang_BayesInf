@@ -1,12 +1,12 @@
 import styles from './DefinitionPad.module.css'
-import { handlePost } from '../utils/helper.js';
+import { handlePost, ConfigField } from '../utils/helper.js';
 
 export default function DefinitionPad({ 
     selectedCase, setSelectedCase, 
     NMCMC, setNMCMC,
     Nthin, setNthin,
-    Ntune, setNtune,
-    handleCompute,
+    Nburn, setNburn,
+    handleCompute, setIsComputed,
     endpoint
     }) {
 
@@ -14,11 +14,23 @@ export default function DefinitionPad({
         const value = e.target.value;
         setSelectedCase(value);
         handlePost(value, "selectedItem", endpoint + "case/select")
+        setIsComputed(false)
     };
+
+    const configFields = [
+        {label: 'NMCMC', value: NMCMC, onChange: setNMCMC,
+        endpoint: endpoint + "inf/NMCMC"},
+        {label: 'Nthin', value: Nthin, onChange: setNthin,
+        endpoint: endpoint + "inf/Nthin"},
+        {label: 'Nburn', value: Nburn, onChange: setNburn,
+        endpoint: endpoint + "inf/Nburn"}
+    ];
   
     return (
+        // DEFINITION PAD
         <div className={styles.DefinitionPad}>
 
+            {/* DATA CASE SELECTION PAD */} 
             <div className={styles.DefSubPad}>
               <h3>Data Case Selection</h3>
               <div>
@@ -35,65 +47,43 @@ export default function DefinitionPad({
               </div>
             </div>
 
+            {/* REGRESSION MODEL PAD */} 
             <div className={styles.DefSubPad}>    
-              <h3>Regressor Selection</h3>
+                <h3>Regressor Selection</h3>
                 <div>
-                  <select>
-                    <option>Linear Polynomial</option>
-                    <option>Elastic Net</option>
-                    <option>SVR</option>
-                    <option>Random Forest</option>
-                  </select>
-                  <div className={styles.TwoButtonArray}>
-                    <button>Parameter</button>
-                    <button>Fit Model</button>
-                  </div>
+                    <select>
+                        <option>Linear Polynomial</option>
+                        <option>Elastic Net</option>
+                        <option>SVR</option>
+                        <option>Random Forest</option>
+                    </select>
+                    <div className={styles.TwoButtonArray}>
+                        <button>Parameter</button>
+                        <button>Fit Model</button>
+                    </div>
                 </div>
             </div>
 
+            {/* BAYESIAN MODEL PAD */} 
             <div className={styles.DefSubPad}>
-              <h3>Bayesian Model Selection</h3>
+                <h3>Bayesian Model Selection</h3>
             </div>
 
+            {/* INFERENCE PAD */} 
             <div className={styles.DefSubPad}>
-              <h3>Inference Configuration</h3>
-              <div className={styles.OneLineField}>
-                <label style={{paddingRight: "1em"}}>
-                NMCMC
-                </label>
-                <input type="text" value={NMCMC} style={{marginRight: "1em", width:"30%"}}
-                  placeholder="NMCMC" onChange={(e) => setNMCMC(e.target.value)} required>
-                </input>
-                <button onClick={() => handlePost(parseFloat(NMCMC), "NMCMC", endpoint + "inf/NMCMC")} >
-                  Send
-                </button>
-              </div>
-              <div className={styles.OneLineField}>
-                <label style={{paddingRight: "1em"}}>
-                Nthin
-                </label>
-                <input type="text" value={Nthin} style={{marginRight: "1em", width:"30%"}} 
-                  onChange={(e) => setNthin(e.target.value)}
-                  placeholder="Nthin">
-                </input>
-                <button onClick={() => handlePost(parseFloat(Nthin), "NMCMC", endpoint + "inf/Nthin")} >
-                  Send
-                </button>
-              </div>
-              <div className={styles.OneLineField}>
-                <label style={{paddingRight: "1em"}}>
-                Nthin
-                </label>
-                <input type="text" value={Ntune} style={{marginRight: "1em", width:"30%"}}
-                  onChange={(e) => setNtune(e.target.value)}
-                  placeholder="Ntune">
-                </input>
-                <button onClick={() => handlePost(parseFloat(Ntune), "NMCMC", endpoint + "inf/Ntune")} >
-                  Send
-                </button>
-              </div>
+                <h3>Inference Configuration</h3>
+                {configFields.map((field) => (
+                    <ConfigField
+                    key={field.label}
+                    label={field.label}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onSend={handlePost}
+                    endpoint={field.endpoint}
+                    />
+                ))}
               <div>
-                <button
+                <button style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
                 onClick={handleCompute}>
                   Compute
               </button>
