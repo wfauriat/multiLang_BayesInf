@@ -15,26 +15,33 @@ function App() {
   const [selectedCase, setSelectedCase] = useState('');
   const [selectedDimR, setSelectedDimR] = useState(parseInt(0));
   const [isComputed, setIsComputed] = useState(false);
+  const [isDisplayed, setIsDisplayed] = useState(false);
   const [chainData, setChainData] = useState(null);
+  const [dimChain, setDimChain] = useState(parseInt(0))
 
   useEffect(() => {
       if (!isComputed) return;
-      
-      const fetchChainData = async () => {
-          try {
-              const response = await fetch(ENDPOINT + "chains");
-              if (!response.ok) {
-                  throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              const data = await response.json();
-              console.log("chains fetch")
-              setChainData(data);
-          } catch (err) {
-              setChainData(null);
+      else {
+        fetchChainData();
+        setIsDisplayed(true)
+      }
+  }, [isComputed, isDisplayed, selectedCase]);
+
+
+  const fetchChainData = async () => {
+      try {
+          const response = await fetch(ENDPOINT + "chains");
+          if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
           }
-      };
-      fetchChainData();
-  }, [isComputed, selectedCase]);
+          const data = await response.json();
+          setChainData(data);
+          setDimChain(parseInt(data.chains[0].length))
+      } catch (err) {
+          setChainData(null);
+          console.log(err)
+      }
+  };
 
   const handleCompute = async () => {
     try{
@@ -42,7 +49,7 @@ function App() {
         const data = await response.json();
         console.log(data.message)
         setIsComputed(true)
-        console.log(isComputed)
+        setIsDisplayed(false)
     } catch (err) {
       console.log(err)
       setIsComputed(false);
@@ -68,9 +75,10 @@ function App() {
                 />
                 <ControlPad 
                   selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
+                  dimChain={dimChain}
                 />
               <div>
-              <button onClick={()=>{console.log(isComputed)}}>
+              <button onClick={()=>{console.log(chainData.chains[0].length)}}>
                 Test
               </button>
             </div>

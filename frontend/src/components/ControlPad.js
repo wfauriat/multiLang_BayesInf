@@ -1,7 +1,10 @@
 import styles from './ControlPad.module.css'
+// import { v4 as uuidv4 } from 'uuid';
 
-export default function ControlPad({selectedDimR, setSelectedDimR}) {
-            
+export default function ControlPad({selectedDimR, setSelectedDimR, dimChain}) {
+    const optionsArray = Array.from({ length: dimChain }, (v, i) => parseInt(i));
+    // console.log(optionsArray)
+
     return (
         <div className={styles.ControlPad}>
             <h2>Control Pad</h2>
@@ -10,10 +13,9 @@ export default function ControlPad({selectedDimR, setSelectedDimR}) {
               <select value={selectedDimR} 
                 onChange={(e) => setSelectedDimR(parseInt(e.target.value))}
                 style={{width:"30%", display:"inline"}}>
-                <option value={0}>0</option>
-                <option value={1}>1</option>
-                <option value={2}>2</option>
-                <option value={3}>3</option>
+                {optionsArray.map((index) => (
+                  <option value={index}>{index}</option>
+                  ))}
               </select>
             </div>
         </div>

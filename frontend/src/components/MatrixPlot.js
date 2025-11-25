@@ -10,21 +10,33 @@ export default function MatrixPlot({ chainData, selectedDimR }) {
       console.log("No valid data to plot");
       return [];
     }
-    
-    // console.log(`Processing ${chainData.chains.length} rows`);
-    
-    // Map each row to a chart-friendly format
-    return chainData.chains.map((row, index) => ({
-      index: index,
-      col1: row[0],  // First column
-      col2: row[1],  // Second column (optional)
-      col3: row[2],  // Third column (optional)
-      col4: row[3]   // Fourth column (optional)
-    }));
+        
+    // const transformedData = chainData.chains.map((row, index) => ({
+    //   index: index,
+    //   col1: row[0],  // First column
+    //   col2: row[1],  // Second column (optional)
+    //   col3: row[2],  // Third column (optional)
+    //   col4: row[3],   // Fourth column (optional)
+    //   col5: row[4] // TO BE ADDED
+    //   }));
+
+    const transformedData = chainData.chains.map((row, index) => {
+      const dynamicCols = row.reduce((acc, colValue, colIndex) => {
+        const colName = `col${colIndex + 1}`;
+          acc[colName] = colValue;
+          return acc;
+      }, {});
+      return {
+        index: index,
+        ...dynamicCols // Use the spread operator to include all dynamic columns
+        };
+      });
+
+    return transformedData
+
   }, [chainData]);
 
   const getCol = (i) => `col${i+1}`;
-  // console.log(getCol(selectedDimR));
     
   // If no data, show a message
   if (chartData.length === 0) {
@@ -59,23 +71,12 @@ export default function MatrixPlot({ chainData, selectedDimR }) {
           <Line 
             type="monotone"
             dataKey={getCol(selectedDimR)}
-            name="Column 1"
+            name={getCol(selectedDimR)}
             stroke="#1c7e29ff" 
             strokeWidth={1}
             dot={false}
             isAnimationActive={false}
           />
-          
-          {/* Uncomment to plot additional columns */}
-          {/* <Line 
-            type="monotone"
-            dataKey="col2" 
-            name="Column 2"
-            stroke="#2563eb" 
-            strokeWidth={1}
-            dot={false}
-            isAnimationActive={false}
-          /> */}
         </LineChart>
       </ResponsiveContainer>
     </div>
