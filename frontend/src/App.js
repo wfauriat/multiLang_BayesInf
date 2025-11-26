@@ -14,10 +14,14 @@ function App() {
   const [Nburn, setNburn] = useState('');
   const [selectedCase, setSelectedCase] = useState('');
   const [selectedDimR, setSelectedDimR] = useState(parseInt(0));
+  const [selectedDim1, setSelectedDim1] = useState(parseInt(0));
+  const [selectedDim2, setSelectedDim2] = useState(parseInt(1));
   const [isComputed, setIsComputed] = useState(false);
   const [isDisplayed, setIsDisplayed] = useState(false);
   const [chainData, setChainData] = useState(null);
   const [dimChain, setDimChain] = useState(parseInt(0));
+  const [MCsortData, setMCsortData] = useState(null);
+  const [LLsortData, setLLsortData] = useState(null);
 
   useEffect(() => {
       if (!isComputed) return;
@@ -30,15 +34,19 @@ function App() {
 
   const fetchChainData = async () => {
       try {
-          const response = await fetch(ENDPOINT + "chains");
+          const response = await fetch(ENDPOINT + "results");
           if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
           setChainData(data);
-          setDimChain(parseInt(data.chains[0].length))
+          setDimChain(parseInt(data.chains[0].length));
+          setMCsortData(data.MCsort);
+          setLLsortData(data.LLsort);
       } catch (err) {
           setChainData(null);
+          setMCsortData(null);
+          setLLsortData(null);
           console.log(err)
       }
   };
@@ -72,13 +80,16 @@ function App() {
             <div className={styles.DisplayPad}>
                 <CanvasPad 
                   chainData={chainData} selectedDimR={selectedDimR} 
+                  selectedDim1={selectedDim1} selectedDim2={selectedDim2}
                 />
                 <ControlPad 
                   selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
+                  selectedDim1={selectedDim1} setSelectedDim1={setSelectedDim1}
+                  selectedDim2={selectedDim2} setSelectedDim2={setSelectedDim2}
                   dimChain={dimChain}
                 />
               <div>
-              <button onClick={()=>{console.log(chainData.chains[0].length)}}>
+              <button onClick={()=>{console.log(chainData.chains.slice(0,100))}}>
                 Test
               </button>
             </div>

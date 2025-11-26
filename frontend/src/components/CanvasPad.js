@@ -3,7 +3,7 @@ import SingleChainPlot from './SingleChainPlot';
 import ChainScatterPlot from './ChainScatterPlot';
 import styles from './CanvasPad.module.css'
 
-export default function CanvasPad({chainData, selectedDimR}) {
+export default function CanvasPad({chainData, selectedDimR, selectedDim1, selectedDim2}) {
 
     const [activeTab, setActiveTab] = useState(0);
     
@@ -20,7 +20,8 @@ export default function CanvasPad({chainData, selectedDimR}) {
         case 0:
             return <h2>Hello 0</h2>;
         case 1:
-            return chainData && <ChainScatterPlot />
+            return chainData && <ChainScatterPlot chainData={chainData} 
+                                selectedDim1={selectedDim1} selectedDim2={selectedDim2}/>
         case 2:
             return <h2>Hello 2</h2>;
         case 3:

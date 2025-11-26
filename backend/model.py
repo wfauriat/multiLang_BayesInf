@@ -66,10 +66,12 @@ def compute():
     model.post_treat_chains()
     return jsonify({'message': 'Computation Succeded'}), 200
 
-@bp_comp.route('/chains')
+@bp_comp.route('/results')
 def get_chains():
     try: 
-        return jsonify({'chains': model.MCalgo.cut_chain.tolist()}), 200
+        return jsonify({'chains': model.MCalgo.cut_chain.tolist(),
+                         'MCsort': model.MCsort.tolist(),
+                         'LLsort': model.LLsort.tolist()}), 200
     except Exception:
         return jsonify({'message': 'Computation has not been made' }), 200
 

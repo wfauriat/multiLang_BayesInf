@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { listToChartData } from '../utils/helper.js';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
 export default function SingleChainPlot({ chainData, selectedDimR }) {
@@ -10,32 +11,13 @@ export default function SingleChainPlot({ chainData, selectedDimR }) {
       return [];
     }
         
-    // const transformedData = chainData.chains.map((row, index) => ({
-    //   index: index,
-    //   col1: row[0],  // First column
-    //   col2: row[1],  // Second column (optional)
-    //   col3: row[2],  // Third column (optional)
-    //   col4: row[3],   // Fourth column (optional)
-    //   col5: row[4] // TO BE ADDED
-    //   }));
-
-    const transformedData = chainData.chains.map((row, index) => {
-      const dynamicCols = row.reduce((acc, colValue, colIndex) => {
-        const colName = `col${colIndex + 1}`;
-          acc[colName] = colValue;
-          return acc;
-      }, {});
-      return {
-        index: index,
-        ...dynamicCols
-        };
-      });
+    const transformedData = listToChartData(chainData)
 
     return transformedData
 
   }, [chainData]);
 
-  const getCol = (i) => `col${i+1}`;
+  const getCol = (i) => `col${i}`;
     
   if (chartData.length === 0) {
     return (
@@ -56,10 +38,12 @@ export default function SingleChainPlot({ chainData, selectedDimR }) {
           <XAxis 
             dataKey="index" 
             label={{ value: 'Index', position: 'insideBottom', offset: -5 }}
+            domain={['auto', 'auto']}
           />
           
           <YAxis 
             label={{ value: 'Value', angle: -90, position: 'insideLeft' }}
+            domain={['auto', 'auto']}
           />
           
           {/* <Tooltip /> */}

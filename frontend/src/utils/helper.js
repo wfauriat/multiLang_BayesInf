@@ -35,3 +35,27 @@ export function ConfigField({ label, value, onChange, onSend, endpoint }) {
   );
 }
 
+export const listToChartData = (listData) => {
+      const transformedData = listData.chains.map((row, index) => {
+      const dynamicCols = row.reduce((acc, colValue, colIndex) => {
+        const colName = `col${colIndex}`;
+          acc[colName] = colValue;
+          return acc;
+      }, {});
+      return {
+        index: index,
+        ...dynamicCols
+        };
+      });
+
+    // const transformedData = chainData.chains.map((row, index) => ({
+    //   index: index,
+    //   col1: row[0],  // First column
+    //   col2: row[1],  // Second column (optional)
+    //   col3: row[2],  // Third column (optional)
+    //   col4: row[3],   // Fourth column (optional)
+    //   col5: row[4] // TO BE ADDED
+    //   }));
+
+    return transformedData
+}
