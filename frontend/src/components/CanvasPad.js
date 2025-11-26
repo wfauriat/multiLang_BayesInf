@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import MatrixPlot from './MatrixPlot';
+import SingleChainPlot from './SingleChainPlot';
+import ChainScatterPlot from './ChainScatterPlot';
 import styles from './CanvasPad.module.css'
 
 export default function CanvasPad({chainData, selectedDimR}) {
@@ -19,11 +20,11 @@ export default function CanvasPad({chainData, selectedDimR}) {
         case 0:
             return <h2>Hello 0</h2>;
         case 1:
-            return <h2>Hello 1</h2>;
+            return chainData && <ChainScatterPlot />
         case 2:
             return <h2>Hello 2</h2>;
         case 3:
-            return chainData && <MatrixPlot chainData={chainData} selectedDimR={selectedDimR}/>
+            return chainData && <SingleChainPlot chainData={chainData} selectedDimR={selectedDimR}/>
         case 4:
             return <h2>Hello 4</h2>;
         default:

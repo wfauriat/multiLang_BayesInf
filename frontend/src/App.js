@@ -17,7 +17,7 @@ function App() {
   const [isComputed, setIsComputed] = useState(false);
   const [isDisplayed, setIsDisplayed] = useState(false);
   const [chainData, setChainData] = useState(null);
-  const [dimChain, setDimChain] = useState(parseInt(0))
+  const [dimChain, setDimChain] = useState(parseInt(0));
 
   useEffect(() => {
       if (!isComputed) return;

@@ -1,5 +1,4 @@
 import styles from './ControlPad.module.css'
-// import { v4 as uuidv4 } from 'uuid';
 
 export default function ControlPad({selectedDimR, setSelectedDimR, dimChain}) {
     const optionsArray = Array.from({ length: dimChain }, (v, i) => parseInt(i));

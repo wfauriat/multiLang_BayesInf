@@ -46,7 +46,9 @@ class ModelUI(QObject):
         self.MCsort = None
         self.LLsort = None
         self.postpar = None
+        self.postMAP = None
         self.postY = None
+        self.postYeps = None
         self.data_case = None
         self.custom_case = VoidCase()
         self.rnds = None

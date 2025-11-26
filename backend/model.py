@@ -59,12 +59,16 @@ def compute():
     model.MCalgo.MCchain[0] = model.bstart
     model.MCalgo.state(0, set_state=True)
     model.MCalgo.runInference()
+    model.regr_fit()
+    model.postpar = model.MCalgo.cut_chain
+    model.MCsort = model.MCalgo.idx_chain
+    model.LLsort = model.MCalgo.cut_llchain[model.MCalgo.sorted_indices]
+    model.post_treat_chains()
     return jsonify({'message': 'Computation Succeded'}), 200
 
 @bp_comp.route('/chains')
 def get_chains():
     try: 
-        chains = model.MCalgo.cut_chain
         return jsonify({'chains': model.MCalgo.cut_chain.tolist()}), 200
     except Exception:
         return jsonify({'message': 'Computation has not been made' }), 200
