@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import SingleChainPlot from './SingleChainPlot';
 import ChainScatterPlot from './ChainScatterPlot';
+import PostPredPlot from './PostPredPlot';
 import styles from './CanvasPad.module.css'
 
-export default function CanvasPad({chainData, selectedDimR, selectedDim1, selectedDim2}) {
+export default function CanvasPad({chainData, selectedDimR, selectedDim1, selectedDim2,
+                                    MCsortData, LLsortData,
+                                    xmes, yobs, postY, postYeps}) {
 
     const [activeTab, setActiveTab] = useState(0);
     
@@ -18,14 +21,17 @@ export default function CanvasPad({chainData, selectedDimR, selectedDim1, select
     const renderTabContent = () => {
     switch(activeTab) {
         case 0:
-            return <h2>Hello 0</h2>;
+            // return <h2>Hello</h2>
+            return chainData && <PostPredPlot xmes={xmes} yobs={yobs} postY={postY} postYeps={postYeps}
+                                    selectedDimR={selectedDimR} />
         case 1:
-            return chainData && <ChainScatterPlot chainData={chainData} 
-                                selectedDim1={selectedDim1} selectedDim2={selectedDim2}/>
+            return chainData && <ChainScatterPlot
+                                selectedDim1={selectedDim1} selectedDim2={selectedDim2}
+                                MCsortData={MCsortData} LLsortData={LLsortData}/>
         case 2:
             return <h2>Hello 2</h2>;
         case 3:
-            return chainData && <SingleChainPlot chainData={chainData} selectedDimR={selectedDimR}/>
+            return chainData && <SingleChainPlot chainData={chainData} selectedDim1={selectedDim1}/>
         case 4:
             return <h2>Hello 4</h2>;
         default:

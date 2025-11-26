@@ -71,7 +71,11 @@ def get_chains():
     try: 
         return jsonify({'chains': model.MCalgo.cut_chain.tolist(),
                          'MCsort': model.MCsort.tolist(),
-                         'LLsort': model.LLsort.tolist()}), 200
+                         'LLsort': model.LLsort.tolist(),
+                         'xmes': model.data_case.xmes.tolist(),
+                         'obs': model.data_case.ymes.tolist(),
+                         'postY': model.postY.tolist(),
+                         'postYeps': model.postYeps.tolist()}), 200
     except Exception:
         return jsonify({'message': 'Computation has not been made' }), 200
 

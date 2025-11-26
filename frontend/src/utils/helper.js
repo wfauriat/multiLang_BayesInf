@@ -36,7 +36,7 @@ export function ConfigField({ label, value, onChange, onSend, endpoint }) {
 }
 
 export const listToChartData = (listData) => {
-      const transformedData = listData.chains.map((row, index) => {
+      const transformedData = listData.map((row, index) => {
       const dynamicCols = row.reduce((acc, colValue, colIndex) => {
         const colName = `col${colIndex}`;
           acc[colName] = colValue;

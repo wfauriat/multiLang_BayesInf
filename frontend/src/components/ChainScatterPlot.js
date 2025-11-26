@@ -2,28 +2,28 @@ import { useMemo } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { listToChartData } from '../utils/helper.js';
 
-export default function ChainScatterPlot({chainData, selectedDim1, selectedDim2}) {
+export default function ChainScatterPlot({selectedDim1, selectedDim2,
+                                          MCsortData, LLsortData}) {
 
   const chartData = useMemo(() => {
     // Safety checks
-    if (!chainData || !chainData.chains || !Array.isArray(chainData.chains) || chainData.chains.length === 0) {
+    if (!MCsortData || !Array.isArray(MCsortData) || MCsortData.length === 0 || !LLsortData) {
       console.log("No valid data to plot");
       return [];
     }
       
-    const limitedData = {chains: [...chainData.chains].slice(0, 300)}
+    const limitedData = MCsortData.slice(0, 300)
     const transformedData = listToChartData(limitedData)
     // const transformedData = listToChartData(chainData)
 
     return transformedData
 
-  }, [chainData]);
+  }, [MCsortData, LLsortData]);
 
   const getCol = (i) => `col${i}`;
 
 
 const getJetColor = (value, min, max) => {
-  // Normalize value to 0-1 range
   const normalized = (value - min) / (max - min);
   let r, g, b;
   if (normalized < 0.125) {
@@ -54,59 +54,12 @@ const getJetColor = (value, min, max) => {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-  // const zMin = Math.min(...chartData.map(d => d.col0));
-  // const zMax = Math.max(...chartData.map(d => d.col0));
-
-  // console.log(chartData)
-  // console.log(zMin)
-  // console.log(zMax)
-
-        // <Scatter name="Data Points" data={data}>
-        //   {data.map((entry, index) => (
-        //     <Cell key={`cell-${index}`} fill={getJetColor(entry.z, zMin, zMax)} />
-        //   ))}
-        // </Scatter>
-
-
-
-  // Example data: 2D coordinates (x, y) with associated color values
-  // const xValues = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  // const yValues = [2, 4, 3, 7, 5, 8, 6, 9, 7, 10];
-  // const colorValues = [0.1, 0.3, 0.2, 0.7, 0.5, 0.8, 0.6, 0.9, 0.7, 1.0];
-  
-  // const getColor = (value) => {
-  //   // Simple gradient from blue to red
-  //   const r = Math.floor(value * 255);
-  //   const b = Math.floor((1 - value) * 255);
-  //   return `rgb(${r}, 100, ${b})`;
-  // };
-  
-  // const CustomDot = (props) => {
-  //   const { cx, cy, fill } = props;
-  //   return (
-  //     <circle cx={cx} cy={cy} r={6} fill={fill} stroke="#fff" strokeWidth={1} />
-  //   );
-  // };
-
-  // SYNTAX FOR COLOR DOTS BELOW
-  //   <Scatter 
-  //   name="Data Points" 
-  //   data={chartData} 
-  //   shape={<CustomDot />}
-  // />
-
-  // const data = xValues.map((x, i) => ({
-  //   x: x,
-  //   y: yValues[i],
-  //   colorValue: colorValues[i],
-  //   fill: getColor(colorValues[i])
-  // }));
-  
-
+  const zMin = Math.min(...LLsortData);
+  const zMax = Math.max(...LLsortData);
 
   return (
-    <div>     
-        <ResponsiveContainer width="100%" height={400}>
+    <div style={{ width: '100%', padding: '40px'}}>     
+        <ResponsiveContainer width="100%" height={450}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
@@ -142,15 +95,27 @@ const getJetColor = (value, min, max) => {
               }}
             /> */}
             <Legend />
-            <Scatter 
-              name="Data Points" 
-              data={chartData} 
-              fill={"blue"}
-            />
+            <Scatter name="Data Points" data={chartData}>
+              {LLsortData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getJetColor(entry, zMin, zMax)} />
+              ))}
+            </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
         
         {/* Color scale legend */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Z-Axis Color Scale</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{zMin.toFixed(1)}</span>
+            <div className="flex-1 h-6 rounded" style={{
+              background: `linear-gradient(to right, 
+                #00007f, #0000ff, #0080ff, #00ffff, 
+                #80ff80, #ffff00, #ff8000, #ff0000, #7f0000)`
+            }} />
+            <span className="text-sm">{zMax.toFixed(1)}</span>
+          </div>
+      </div>
         {/* <div className="mt-6">
           <p className="text-sm font-semibold mb-2 text-gray-700">Color Scale:</p>
           <div className="flex items-center gap-2">

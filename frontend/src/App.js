@@ -22,6 +22,11 @@ function App() {
   const [dimChain, setDimChain] = useState(parseInt(0));
   const [MCsortData, setMCsortData] = useState(null);
   const [LLsortData, setLLsortData] = useState(null);
+  const [xmes, setXmes] = useState(null);
+  const [dimX, setDimX] = useState(parseInt(0));
+  const [yobs, setYobs] = useState(null);
+  const [postY, setPostY] = useState(null);
+  const [postYeps, setPostYeps] = useState(null);
 
   useEffect(() => {
       if (!isComputed) return;
@@ -39,14 +44,23 @@ function App() {
               throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
-          setChainData(data);
+          setChainData(data.chains);
           setDimChain(parseInt(data.chains[0].length));
           setMCsortData(data.MCsort);
           setLLsortData(data.LLsort);
+          setXmes(data.xmes);
+          setDimX(parseInt(data.xmes[0].length));
+          setYobs(data.obs);
+          setPostY(data.postY);
+          setPostYeps(data.postYeps);
       } catch (err) {
           setChainData(null);
           setMCsortData(null);
           setLLsortData(null);
+          setXmes(null);
+          setYobs(null);
+          setPostY(null);
+          setPostYeps(null);
           console.log(err)
       }
   };
@@ -81,15 +95,17 @@ function App() {
                 <CanvasPad 
                   chainData={chainData} selectedDimR={selectedDimR} 
                   selectedDim1={selectedDim1} selectedDim2={selectedDim2}
+                  MCsortData={MCsortData} LLsortData={LLsortData}
+                  xmes={xmes} yobs={yobs} postY={postY} postYeps={postYeps}
                 />
                 <ControlPad 
                   selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
                   selectedDim1={selectedDim1} setSelectedDim1={setSelectedDim1}
                   selectedDim2={selectedDim2} setSelectedDim2={setSelectedDim2}
-                  dimChain={dimChain}
+                  dimChain={dimChain} dimX={dimX}
                 />
               <div>
-              <button onClick={()=>{console.log(chainData.chains.slice(0,100))}}>
+              <button onClick={()=>{console.log(xmes[0].length)}}>
                 Test
               </button>
             </div>
