@@ -7,6 +7,8 @@ export default function DefinitionPad({
     dimChain, 
     selectedDimM, setSelectedDimM,
     selectedDistType, setSelectedDistType,
+    paramMLow, paramMHigh,
+    setParamMLow, setParamMHigh,
     NMCMC, setNMCMC,
     Nthin, setNthin,
     Nburn, setNburn,
@@ -28,12 +30,40 @@ export default function DefinitionPad({
         handlePost(value, "selectedItem", endpoint + "regr/select")
     };
 
-    const handleSelectDist= async (e) => {
-        const value = e.target.value;
-        setSelectedDistType(value);
-        handlePost(value, "selectedItem", endpoint + "modelBayes/select")
-    };    
+    // const handleSelectDist= async (e) => {
+    //     const value = e.target.value;
+    //     setSelectedDistType(value);
+    //     // handlePost(value, "selectedItem", endpoint + "modelBayes/select")
+    //     try {
+    //       const response = await fetch(endpoint + "modelBayes/select", {
+    //         method: 'POST',
+    //         headers: {'Content-Type': 'application/json'},
+    //         body: JSON.stringify({ "selected_dist" : value, "paramMLow" : paramMLow, "paramMHigh": paramMHigh }),
+    //       });
+    //       if (response.ok) {
+    //         console.log("POST SUCCESSFUL", value)
+    //       }
+    //     } catch (error) {
+    //       console.log(error.message);
+    //     }
+    //   }; 
     
+        const handleSelectDist= async () => {
+        try {
+          const response = await fetch(endpoint + "modelBayes/select", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ "selected_dist" : selectedDistType,
+               "paramMLow" : parseFloat(paramMLow), "paramMHigh": parseFloat(paramMHigh) }),
+          });
+          if (response.ok) {
+            console.log("POST SUCCESSFUL", selectedDistType)
+          }
+        } catch (error) {
+          console.log(error.message);
+        }
+      }; 
+
     const handleSelectCurrentM= async (e) => {
         const value = parseInt(e.target.value);
         handlePost(value, "selectedItem", endpoint + "modelBayes/current")
@@ -48,8 +78,9 @@ export default function DefinitionPad({
         endpoint: endpoint + "inf/Nburn"}
     ];
 
-    const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
-    const DimSelectFieldX = ({selectDimField, setterDimField}) => {
+    
+    const DimSelectFieldX = ({selectDimField, setterDimField, dimChain}) => {
+      const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
       return (
               <select value={selectDimField} 
                 onChange={(e) => {
@@ -111,18 +142,23 @@ export default function DefinitionPad({
                 <h3>Bayesian Model Selection</h3>
                 <div>
                   <p style={{display:"inline-block", width:"150px", margin:"0.5em 0"}}>Dimension selection</p>
-                  <DimSelectFieldX selectDimField={selectedDimM} setterDimField={setSelectedDimM}/>
-                  <select value={selectedDistType} onChange={handleSelectDist} onClick={handleSelectDist}>
+                  <DimSelectFieldX selectDimField={selectedDimM} setterDimField={setSelectedDimM} dimChain={dimChain}/>
+                  {/* <select value={selectedDistType} onChange={handleSelectDist} onClick={handleSelectDist}> */}
+                  <select value={selectedDistType} onChange={(e) => {setSelectedDistType(e.target.value)}} >
                     <option value="Normal">Normal</option>
                     <option value="Uniform">Uniform</option>
                     <option value="Half-Normal">Half-Normal</option>
                   </select>
                   <div style={{display:"flex", justifyContent:"center", flexDirection:"row"}}>
-                    <input type="text" placeholder="LowValue" 
+                    <input type="text" placeholder="LowValue" value={paramMLow}
+                    onChange={(e) => {setParamMLow(e.target.value)}}
                     style={{width:"100px", margin:"0.2em 1em"}}/>
-                    <input type="text" placeholder="HighValue" 
+                    <input type="text" placeholder="HighValue" value={paramMHigh}
+                    onChange={(e) => {setParamMHigh(e.target.value)}}
                     style={{width:"100px", margin:"0.2em 1em"}}/>
                   </div>
+                  <button style={{display:"block", width:"150px", margin:"0 auto"}} 
+                    onClick={() => {handleSelectDist();}}>Send</button>
                 </div>
             </div>
 

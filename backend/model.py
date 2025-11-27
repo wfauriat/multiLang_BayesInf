@@ -51,21 +51,41 @@ def handle_select_case():
     
     return jsonify({'message': 'Success', 'received': selected_item}), 200
 
+@bp_case.route('/select', methods=['GET'])
+def get_select_case():
+    value = getattr(model, "data_selected_case")
+    return jsonify({'message': 'Success', 'selected_case': value}), 200
+
+@bp_case.route('/dimChain', methods=['GET'])
+def get_dimChain():
+    value = getattr(model, "bstart")
+    return jsonify({'message': 'Success', 'dimChain': value.shape[0]}), 200
+
 @bp_modelBayes.route('/select', methods=['POST'])
 def handle_select_dist():
     data = request.get_json()
-    selected_item = data.get('selectedItem')
-    model.currentDistType = selected_item
+    selected_dist = data.get('selected_dist')
+    paramMLow = data.get('paramMLow')
+    paramMHigh = data.get('paramMHigh')
+    model.currentDistType = selected_dist
+    if model.currentM < len(model.rndUs):
+        if model.currentDistType == "Normal":
+            model.rndUs[model.currentM] = NormVar([paramMLow,paramMHigh])
+        elif model.currentDistType == "Uniform":
+            model.rndUs[model.currentM] = UnifVar([paramMLow,paramMHigh])
+        elif model.currentDistType == "Half-Normal":
+            model.rndUs[model.currentM] = HalfNormVar(paramMHigh)
+    else: model.rnds = HalfNormVar(paramMHigh)
 
-    print(f"Received: {selected_item}")   
-    return jsonify({'message': 'Success', 'received': selected_item}), 200
+    print(f"Received: {selected_dist, paramMLow, paramMHigh}")   
+    return jsonify({'message': 'Success', 'received': selected_dist}), 200
 
 @bp_modelBayes.route('/current', methods=['POST'])
 def handle_select_currentM():
     data = request.get_json()
     selected_item = data.get('selectedItem')
     model.currentM = selected_item
-    if model.currentM < len(model.rndUs)-1:
+    if model.currentM < len(model.rndUs):
         if isinstance(model.rndUs[model.currentM], NormVar):
             model.currentDistType = "Normal"
         elif isinstance(model.rndUs[model.currentM], UnifVar):

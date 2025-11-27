@@ -16,6 +16,8 @@ function App() {
   const [selectedModReg, setSelectedModReg] = useState('');
   const [selectedDimR, setSelectedDimR] = useState(parseInt(0));
   const [selectedDimM, setSelectedDimM] = useState(parseInt(0));
+  const [paramMLow, setParamMLow] = useState(parseFloat(0))
+  const [paramMHigh, setParamMHigh] = useState(parseFloat(0))
   const [selectedDistType, setSelectedDistType] = useState('Normal');
   const [selectedDim1, setSelectedDim1] = useState(parseInt(0));
   const [selectedDim2, setSelectedDim2] = useState(parseInt(1));
@@ -37,10 +39,61 @@ function App() {
   useEffect(() => {
       if (!isComputed) return;
       else {
-        fetchChainData();
+        fetchChainData(); 
+        fetchDimChain();
         setIsDisplayed(true)
       }
   }, [isComputed, isDisplayed, selectedCase]);
+
+  useEffect(() => {
+    const fetchCase = async () => {
+      const response = await fetch(ENDPOINT + "case/select");
+      const data = await response.json();
+      setSelectedCase(data.selected_case);
+    }
+    fetchCase();
+    fetchDimChain();
+    setSelectedDimM(parseInt(0));
+    // console.log("changed case")
+  }, [selectedCase])
+
+  useEffect(() => {
+    const fetchCurrentDist = async () => {
+      const response = await fetch(ENDPOINT + "modelBayes/select");
+      const data = await response.json();
+      setSelectedDistType(data.distType);
+    };
+    fetchCurrentDist();
+    fetchCurrParam();
+    // console.log("changed dimM")
+  }, [selectedDimM])
+
+  // useEffect(() => {
+  //   fetchCurrentDist();
+  //   fetchCase();
+  //   setSelectedDimM(parseInt(0))
+  // }, [])
+
+    const fetchDimChain = async () => {
+      const response = await fetch(ENDPOINT + "case/dimChain");
+      const data = await response.json();
+      setDimChain(data.dimChain);
+    }
+
+    const fetchCurrParam = async () => {
+      const response = await fetch(ENDPOINT + "modelBayes/paramM");
+      const data = await response.json();
+      if (data.hasOwnProperty('lowM')) {
+        setParamMLow(parseFloat(data.lowM));
+        setParamMHigh(parseFloat(data.highM));
+      } 
+      else {
+        setParamMLow(parseFloat(0));
+        setParamMHigh(parseFloat(data.param));
+      }
+    }
+
+
 
 
   const fetchChainData = async () => {
@@ -51,7 +104,7 @@ function App() {
           }
           const data = await response.json();
           setChainData(data.chains);
-          setDimChain(parseInt(data.chains[0].length));
+          // setDimChain(parseInt(data.chains[0].length));
           setMCsortData(data.MCsort);
           setLLsortData(data.LLsort);
           setXmes(data.xmes);
@@ -113,6 +166,8 @@ function App() {
               dimChain={dimChain} 
               selectedDimM={selectedDimM} setSelectedDimM={setSelectedDimM} 
               selectedDistType={selectedDistType} setSelectedDistType={setSelectedDistType}
+              paramMLow={paramMLow} paramMHigh={paramMHigh}
+              setParamMLow={setParamMLow} setParamMHigh={setParamMHigh}
               NMCMC={NMCMC} setNMCMC={setNMCMC} 
               Nthin={Nthin} setNthin={setNthin}
               Nburn={Nburn} setNburn={setNburn}
@@ -135,7 +190,7 @@ function App() {
                   dimChain={dimChain} dimX={dimX}
                 />
               <div>
-              <button onClick={()=>{console.log(yregPred)}}>
+              <button onClick={()=>{console.log(dimChain)}}>
                 Test
               </button>
             </div>
