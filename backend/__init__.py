@@ -12,6 +12,8 @@ def create_app():
     app.register_blueprint(model.bp_comp)
     app.register_blueprint(model.bp_case)
     app.register_blueprint(model.bp_visu)
+    app.register_blueprint(model.bp_regr)
+    app.register_blueprint(model.bp_modelBayes)
 
     @app.route('/')
     def home():

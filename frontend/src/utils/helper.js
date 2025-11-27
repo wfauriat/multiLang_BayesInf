@@ -59,3 +59,55 @@ export const listToChartData = (listData) => {
 
     return transformedData
 }
+
+
+export const generateHistogramData = (data, binCount = 5) => {
+  if (!data || data.length === 0) return [];
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min;
+  
+  const binWidth = range === 0 ? 1 : range / binCount;
+
+  const bins = [];
+  const frequencies = new Array(binCount).fill(0);
+  
+  const precision = 2; 
+
+  for (let i = 0; i < binCount; i++) {
+    const lowerBound = min + i * binWidth;
+    let upperBound = lowerBound + binWidth;
+
+    if (Number.isInteger(min) && Number.isInteger(max) && binWidth >= 1) {
+        upperBound = lowerBound + binWidth - (i === binCount - 1 && max > lowerBound + binWidth - 1 ? 0 : 1);
+        
+         const lastUpper = max;
+        if (i === binCount - 1) {
+             bins.push(`${lowerBound}-${lastUpper}`);
+        } else {
+             bins.push(`${lowerBound}-${upperBound}`);
+        }
+    } 
+    else {
+      const displayLower = lowerBound.toFixed(precision);
+      const displayUpper = upperBound.toFixed(precision);
+      bins.push(`${displayLower} to < ${displayUpper}`);
+    }
+  }
+
+  for (const value of data) {
+    let binIndex = Math.floor((value - min) / binWidth);
+
+    if (binIndex >= binCount) {
+      binIndex = binCount - 1; 
+    }
+    frequencies[binIndex] += 1;
+  }
+  const histogramData = bins.map((binLabel, index) => ({
+    bin: binLabel,
+    frequency: frequencies[index],
+  }));
+
+  return histogramData;
+};

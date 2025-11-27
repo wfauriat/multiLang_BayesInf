@@ -5,11 +5,16 @@ from UIcomps.componentsGUI import ModelUI
 from pyBI.inference import MHalgo
 
 model = ModelUI()
+model.currentM = 0
+model.currentDistType = "Normal"
 
 bp_inf = Blueprint('inf', __name__, url_prefix='/inf')
 bp_case = Blueprint('case', __name__, url_prefix='/case')
 bp_visu = Blueprint('visu', __name__, url_prefix='/visu')
+bp_regr = Blueprint('regr', __name__, url_prefix='/regr')
+bp_modelBayes = Blueprint('modelBayes', __name__, url_prefix='/modelBayes')
 bp_comp = Blueprint('comp', __name__, url_prefix='') 
+
 
 
 @bp_inf.route('/<string:Nparam>', methods=['GET'])
@@ -45,6 +50,32 @@ def handle_select_case():
     
     return jsonify({'message': 'Success', 'received': selected_item}), 200
 
+@bp_modelBayes.route('/select', methods=['POST'])
+def handle_select_dist():
+    data = request.get_json()
+    selected_item = data.get('selectedItem')
+    model.currentDistType = selected_item
+
+    print(f"Received: {selected_item}")   
+    return jsonify({'message': 'Success', 'received': selected_item}), 200
+
+@bp_modelBayes.route('/current', methods=['POST'])
+def handle_select_currentM():
+    data = request.get_json()
+    selected_item = data.get('selectedItem')
+    model.currentM = selected_item
+
+    print(f"Received: {selected_item}")   
+    return jsonify({'message': 'Success', 'received': selected_item}), 200
+
+@bp_modelBayes.route('/current', methods=['GET'])
+def get_select_currentM():
+    return jsonify({'message': 'Success', 'received': model.currentM})
+
+@bp_modelBayes.route('/select', methods=['GET'])
+def get_select_handle_select_dist():
+    return jsonify({'message': 'Success', 'received': model.currentDistType})
+
 
 @bp_comp.route('/compute')
 def compute():
@@ -76,8 +107,32 @@ def get_chains():
                          'obs': model.data_case.ymes.tolist(),
                          'postMAP': model.postMAP.tolist(),
                          'postY': model.postY.tolist(),
-                         'postYeps': model.postYeps.tolist()}), 200
+                         'postYeps': model.postYeps.tolist(),
+                         'yregPred': model.yreg_pred.tolist()},
+                         ), 200
     except Exception:
         return jsonify({'message': 'Computation has not been made' }), 200
 
+
+@bp_regr.route('/reg_pred')
+def get_regpred():
+    try: 
+        return jsonify({'yreg_pred': model.yreg_pred.tolist()}), 200
+    except Exception:
+        return jsonify({'message': 'Computation has not been made' }), 200
     
+@bp_regr.route('/fit')
+def fit_reg():
+    model.regr_fit()
+    return jsonify({'message': 'Regression performed' }), 200
+
+@bp_regr.route('/select', methods=['POST'])
+def handle_select_regr():
+    data = request.get_json()
+    selected_item = data.get('selectedItem')
+
+    print(f"Received: {selected_item}")
+    model.selected_model = selected_item
+    # model.regr_fit()
+    
+    return jsonify({'message': 'Success', 'received': selected_item}), 200

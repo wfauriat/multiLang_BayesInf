@@ -1,11 +1,8 @@
 import { useMemo } from "react";
-import { listToChartData } from '../utils/helper.js';
-import { LineChart, Line, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
 
-
-
-export default function PostPredPlot({ xmes, yobs, postMAP, postY, postYeps, selectedDimR }) {
+export default function PostPredPlot({ xmes, yobs, postMAP, postY, postYeps, yregPred, selectedDimR }) {
 
     // const transpose = arr => arr[0].map((_, i) => arr.map(row => row[i]));
     // const t_postY = transpose(postY)
@@ -22,7 +19,8 @@ export default function PostPredPlot({ xmes, yobs, postMAP, postY, postYeps, sel
     yobs: yobs[i],
     postMAP: postMAP[i],
     postY: postY[i],
-    postYeps: postYeps[i]
+    postYeps: postYeps[i],
+    yregPred: yregPred[i]
     }));
 
 
@@ -56,7 +54,8 @@ export default function PostPredPlot({ xmes, yobs, postMAP, postY, postYeps, sel
       postYeps0: chartData.map(d => ({ x: d[`xmes_${selectedDimR}`], y: d.postYeps[0] })),
       postYeps: [0,2,4,6,8,10].map(i => 
         chartData.map(d => ({ x: d[`xmes_${selectedDimR}`], y: d.postYeps[i] }))
-      )
+      ),
+      yregPred: chartData.map(d => ({ x: d[`xmes_${selectedDimR}`], y: d.yregPred }))
     }), [chartData, selectedDimR]);
 
 
@@ -83,6 +82,11 @@ export default function PostPredPlot({ xmes, yobs, postMAP, postY, postYeps, sel
             name="Post Y Eps" 
             data={scatterData.postYeps0} 
             fill="blue" fillOpacity={0.2} isAnimationActive={false}
+        />
+        <Scatter 
+            name="Regression Pred" 
+            data={scatterData.yregPred} 
+            fill="orange" fillOpacity={1} shape="diamond"  isAnimationActive={false}
         />
         <Scatter 
             name="Y Observed" 

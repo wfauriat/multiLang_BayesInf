@@ -3,10 +3,15 @@ import { handlePost, ConfigField } from '../utils/helper.js';
 
 export default function DefinitionPad({ 
     selectedCase, setSelectedCase, 
+    selectedModReg, setSelectedModReg,
+    dimChain, 
+    selectedDimM, setSelectedDimM,
+    selectedDistType, setSelectedDistType,
     NMCMC, setNMCMC,
     Nthin, setNthin,
     Nburn, setNburn,
     handleCompute, setIsComputed,
+    handleFit,
     endpoint
     }) {
 
@@ -17,6 +22,23 @@ export default function DefinitionPad({
         setIsComputed(false)
     };
 
+    const handleSelectReg = async (e) => {
+        const value = e.target.value;
+        setSelectedModReg(value);
+        handlePost(value, "selectedItem", endpoint + "regr/select")
+    };
+
+    const handleSelectDist= async (e) => {
+        const value = e.target.value;
+        setSelectedDistType(value);
+        handlePost(value, "selectedItem", endpoint + "modelBayes/select")
+    };    
+    
+    const handleSelectCurrentM= async (e) => {
+        const value = parseInt(e.target.value);
+        handlePost(value, "selectedItem", endpoint + "modelBayes/current")
+    };
+
     const configFields = [
         {label: 'NMCMC', value: NMCMC, onChange: setNMCMC,
         endpoint: endpoint + "inf/NMCMC"},
@@ -25,6 +47,22 @@ export default function DefinitionPad({
         {label: 'Nburn', value: Nburn, onChange: setNburn,
         endpoint: endpoint + "inf/Nburn"}
     ];
+
+    const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
+    const DimSelectFieldX = ({selectDimField, setterDimField}) => {
+      return (
+              <select value={selectDimField} 
+                onChange={(e) => {
+                  setterDimField(parseInt(e.target.value));
+                  handleSelectCurrentM(e);
+                }}
+                style={{width:"80px", display:"inline", marginLeft:"1em"}}>
+                {optionsArrayX.map((index) => (
+                  <option key={index} value={index}>{index}</option>
+                  ))}
+              </select>
+      );
+    }
   
     return (
         // DEFINITION PAD
@@ -34,7 +72,7 @@ export default function DefinitionPad({
             <div className={styles.DefSubPad}>
               <h3>Data Case Selection</h3>
               <div>
-                <select value={selectedCase} onChange={handleSelectCase}>
+                <select value={selectedCase} onChange={handleSelectCase} onClick={handleSelectCase}>
                   <option value="Polynomial">Polynomial</option>
                   <option value="Housing">Housing</option>
                 </select>
@@ -51,15 +89,15 @@ export default function DefinitionPad({
             <div className={styles.DefSubPad}>    
                 <h3>Regressor Selection</h3>
                 <div>
-                    <select>
-                        <option>Linear Polynomial</option>
-                        <option>Elastic Net</option>
-                        <option>SVR</option>
-                        <option>Random Forest</option>
+                    <select value={selectedModReg} onChange={handleSelectReg} onClick={handleSelectReg}>
+                        <option value="Linear Polynomial">Linear Polynomial</option>
+                        <option value="ElasticNet">Elastic Net</option>
+                        <option value="SVR">SVR</option>
+                        <option value="RandomForest">Random Forest</option>
                     </select>
                     <div className={styles.TwoButtonArray}>
                         <button>Parameter</button>
-                        <button>Fit Model</button>
+                        <button onClick={handleFit}>Fit Model</button>
                     </div>
                 </div>
             </div>
@@ -67,6 +105,21 @@ export default function DefinitionPad({
             {/* BAYESIAN MODEL PAD */} 
             <div className={styles.DefSubPad}>
                 <h3>Bayesian Model Selection</h3>
+                <div>
+                  <p style={{display:"inline-block", width:"150px", margin:"0.5em 0"}}>Dimension selection</p>
+                  <DimSelectFieldX selectDimField={selectedDimM} setterDimField={setSelectedDimM}/>
+                  <select value={selectedDistType} onChange={handleSelectDist} onClick={handleSelectDist}>
+                    <option value="Normal">Normal</option>
+                    <option value="Uniform">Uniform</option>
+                    <option value="Half-Normal">Half-Normal</option>
+                  </select>
+                  <div style={{display:"flex", justifyContent:"center", flexDirection:"row"}}>
+                    <input type="text" placeholder="LowValue" 
+                    style={{width:"100px", margin:"0.2em 1em"}}/>
+                    <input type="text" placeholder="HighValue" 
+                    style={{width:"100px", margin:"0.2em 1em"}}/>
+                  </div>
+                </div>
             </div>
 
             {/* INFERENCE PAD */} 

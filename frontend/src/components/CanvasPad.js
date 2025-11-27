@@ -2,11 +2,14 @@ import { useState } from 'react';
 import SingleChainPlot from './SingleChainPlot';
 import ChainScatterPlot from './ChainScatterPlot';
 import PostPredPlot from './PostPredPlot';
+import ChainDistPlot from './ChainDistPlot';
+import ErrorFitPlot from './ErrorFitPlot';
 import styles from './CanvasPad.module.css'
 
 export default function CanvasPad({chainData, selectedDimR, selectedDim1, selectedDim2,
                                     MCsortData, LLsortData,
-                                    xmes, yobs, postMAP, postY, postYeps}) {
+                                    xmes, yobs, postMAP, postY, postYeps,
+                                    yregPred}) {
 
     const [activeTab, setActiveTab] = useState(0);
     
@@ -21,22 +24,20 @@ export default function CanvasPad({chainData, selectedDimR, selectedDim1, select
     const renderTabContent = () => {
     switch(activeTab) {
         case 0:
-            // return <h2>Hello</h2>
             return chainData && <PostPredPlot xmes={xmes} yobs={yobs} postMAP={postMAP}
-                                    postY={postY} postYeps={postYeps}
+                                    postY={postY} postYeps={postYeps} yregPred={yregPred}
                                     selectedDimR={selectedDimR} />
         case 1:
-            // return <h2>Hello 2</h2>;
             return chainData && <ChainScatterPlot
                                 selectedDim1={selectedDim1} selectedDim2={selectedDim2}
                                 MCsortData={MCsortData} LLsortData={LLsortData}/>
         case 2:
-            return <h2>Hello 2</h2>;
+            return chainData && <ErrorFitPlot xmes={xmes} yobs={yobs} postMAP={postMAP} 
+                                                yregPred={yregPred} selectedDimR={selectedDimR}/>
         case 3:
-            // return <h2>Hello 2</h2>;
             return chainData && <SingleChainPlot chainData={chainData} selectedDim1={selectedDim1}/>
         case 4:
-            return <h2>Hello 4</h2>;
+            return chainData && <ChainDistPlot chainData={chainData} selectedDim1={selectedDim1}/>
         default:
         return null;
     }
