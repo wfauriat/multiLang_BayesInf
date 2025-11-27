@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from UIcomps.componentsGUI import ModelUI
 
 from pyBI.inference import MHalgo
+from pyBI.base import UnifVar, NormVar, HalfNormVar
 
 model = ModelUI()
 model.currentM = 0
@@ -64,17 +65,33 @@ def handle_select_currentM():
     data = request.get_json()
     selected_item = data.get('selectedItem')
     model.currentM = selected_item
-
+    if model.currentM < len(model.rndUs)-1:
+        if isinstance(model.rndUs[model.currentM], NormVar):
+            model.currentDistType = "Normal"
+        elif isinstance(model.rndUs[model.currentM], UnifVar):
+            model.currentDistType = "Uniform"
+        elif isinstance(model.rndUs[model.currentM], HalfNormVar):
+            model.currentDistType = "Half-Normal"
+    else: model.currentDistType = "Half-Normal"
     print(f"Received: {selected_item}")   
     return jsonify({'message': 'Success', 'received': selected_item}), 200
 
 @bp_modelBayes.route('/current', methods=['GET'])
 def get_select_currentM():
-    return jsonify({'message': 'Success', 'received': model.currentM})
+    return jsonify({'message': 'Success', 'currentM': model.currentM})
 
 @bp_modelBayes.route('/select', methods=['GET'])
 def get_select_handle_select_dist():
-    return jsonify({'message': 'Success', 'received': model.currentDistType})
+    return jsonify({'message': 'Success', 'distType': model.currentDistType})
+
+@bp_modelBayes.route('/paramM', methods=['GET'])
+def get_MParam():
+    if model.currentM > len(model.rndUs)-1:
+        value = getattr(model.rnds, "param")
+        return jsonify({"param": value}), 200
+    else:
+        value = getattr(model.rndUs[model.currentM], "param")
+        return jsonify({"lowM": value[0], "highM": value[1]}), 200
 
 
 @bp_comp.route('/compute')

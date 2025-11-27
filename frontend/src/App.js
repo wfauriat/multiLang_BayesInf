@@ -61,6 +61,7 @@ function App() {
           setPostY(data.postY);
           setPostYeps(data.postYeps);
           setYRegPred(data.yregPred);
+          setSelectedDimM(parseInt(0))
       } catch (err) {
           setChainData(null);
           setMCsortData(null);
