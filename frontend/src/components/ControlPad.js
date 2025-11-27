@@ -13,7 +13,7 @@ export default function ControlPad({selectedDimR, setSelectedDimR,
                 onChange={(e) => setterDimField(parseInt(e.target.value))}
                 style={{width:"80px", display:"inline", marginLeft:"1em"}}>
                 {optionsArrayR.map((index) => (
-                  <option value={index}>{index}</option>
+                  <option key={index} value={index}>{index}</option>
                   ))}
               </select>
       );
@@ -25,7 +25,7 @@ export default function ControlPad({selectedDimR, setSelectedDimR,
                 onChange={(e) => setterDimField(parseInt(e.target.value))}
                 style={{width:"80px", display:"inline", marginLeft:"1em"}}>
                 {optionsArrayX.map((index) => (
-                  <option value={index}>{index}</option>
+                  <option key={index} value={index}>{index}</option>
                   ))}
               </select>
       );

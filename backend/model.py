@@ -74,6 +74,7 @@ def get_chains():
                          'LLsort': model.LLsort.tolist(),
                          'xmes': model.data_case.xmes.tolist(),
                          'obs': model.data_case.ymes.tolist(),
+                         'postMAP': model.postMAP.tolist(),
                          'postY': model.postY.tolist(),
                          'postYeps': model.postYeps.tolist()}), 200
     except Exception:

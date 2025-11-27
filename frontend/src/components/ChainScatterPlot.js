@@ -59,7 +59,7 @@ const getJetColor = (value, min, max) => {
 
   return (
     <div style={{ width: '100%', padding: '40px'}}>     
-        <ResponsiveContainer width="100%" height={450}>
+        <ResponsiveContainer width="100%" height={400}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
@@ -97,8 +97,10 @@ const getJetColor = (value, min, max) => {
             <Legend />
             <Scatter name="Data Points" data={chartData}>
               {LLsortData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getJetColor(entry, zMin, zMax)} />
-              ))}
+                <Cell key={`cell-${index}`} fill={getJetColor(entry, zMin, zMax)} 
+                isAnimationActive={false}/>
+              ))} 
+              isAnimationActive={false}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>

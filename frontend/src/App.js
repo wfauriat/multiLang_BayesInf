@@ -25,8 +25,10 @@ function App() {
   const [xmes, setXmes] = useState(null);
   const [dimX, setDimX] = useState(parseInt(0));
   const [yobs, setYobs] = useState(null);
+  const [postMAP, setPostMAP] = useState(null);
   const [postY, setPostY] = useState(null);
   const [postYeps, setPostYeps] = useState(null);
+
 
   useEffect(() => {
       if (!isComputed) return;
@@ -51,6 +53,7 @@ function App() {
           setXmes(data.xmes);
           setDimX(parseInt(data.xmes[0].length));
           setYobs(data.obs);
+          setPostMAP(data.postMAP);
           setPostY(data.postY);
           setPostYeps(data.postYeps);
       } catch (err) {
@@ -59,6 +62,7 @@ function App() {
           setLLsortData(null);
           setXmes(null);
           setYobs(null);
+          setPostMAP(null);
           setPostY(null);
           setPostYeps(null);
           console.log(err)
@@ -96,7 +100,7 @@ function App() {
                   chainData={chainData} selectedDimR={selectedDimR} 
                   selectedDim1={selectedDim1} selectedDim2={selectedDim2}
                   MCsortData={MCsortData} LLsortData={LLsortData}
-                  xmes={xmes} yobs={yobs} postY={postY} postYeps={postYeps}
+                  xmes={xmes} yobs={yobs} postMAP={postMAP} postY={postY} postYeps={postYeps}
                 />
                 <ControlPad 
                   selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
@@ -105,7 +109,7 @@ function App() {
                   dimChain={dimChain} dimX={dimX}
                 />
               <div>
-              <button onClick={()=>{console.log(xmes[0].length)}}>
+              <button onClick={()=>{console.log(postY)}}>
                 Test
               </button>
             </div>

@@ -2,7 +2,7 @@
 .CanvasPad{
   border: solid 1px white;
   padding-left: 0;
-  min-height: 600px;
+  height: 600px;
 }
 
 .CanvasPad h2 {
