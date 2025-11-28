@@ -40,45 +40,43 @@ function App() {
       if (!isComputed) return;
       else {
         fetchChainData(); 
-        fetchDimChain();
         setIsDisplayed(true)
       }
   }, [isComputed, isDisplayed, selectedCase]);
 
   useEffect(() => {
+    fetchCase();
+    fetchDimChain();
+    setSelectedDimM(parseInt(0));
+    fetchCurrentDist();
+    console.log("changed case")
+  }, [selectedCase])
+
+  useEffect(() => {
+    fetchCurrentDist();
+    fetchCurrParam();
+    fetchCurrentDist();
+    console.log("changed dimM")
+  }, [selectedDimM])
+
+
     const fetchCase = async () => {
       const response = await fetch(ENDPOINT + "case/select");
       const data = await response.json();
       setSelectedCase(data.selected_case);
-    }
-    fetchCase();
-    fetchDimChain();
-    setSelectedDimM(parseInt(0));
-    // console.log("changed case")
-  }, [selectedCase])
-
-  useEffect(() => {
-    const fetchCurrentDist = async () => {
-      const response = await fetch(ENDPOINT + "modelBayes/select");
-      const data = await response.json();
-      setSelectedDistType(data.distType);
     };
-    fetchCurrentDist();
-    fetchCurrParam();
-    // console.log("changed dimM")
-  }, [selectedDimM])
-
-  // useEffect(() => {
-  //   fetchCurrentDist();
-  //   fetchCase();
-  //   setSelectedDimM(parseInt(0))
-  // }, [])
 
     const fetchDimChain = async () => {
       const response = await fetch(ENDPOINT + "case/dimChain");
       const data = await response.json();
       setDimChain(data.dimChain);
-    }
+    };
+
+    const fetchCurrentDist = async () => {
+      const response = await fetch(ENDPOINT + "modelBayes/select");
+      const data = await response.json();
+      setSelectedDistType(data.distType);
+    };
 
     const fetchCurrParam = async () => {
       const response = await fetch(ENDPOINT + "modelBayes/paramM");
@@ -94,8 +92,6 @@ function App() {
     }
 
 
-
-
   const fetchChainData = async () => {
       try {
           const response = await fetch(ENDPOINT + "results");
@@ -104,7 +100,7 @@ function App() {
           }
           const data = await response.json();
           setChainData(data.chains);
-          // setDimChain(parseInt(data.chains[0].length));
+          setDimChain(parseInt(data.chains[0].length));
           setMCsortData(data.MCsort);
           setLLsortData(data.LLsort);
           setXmes(data.xmes);
@@ -174,6 +170,7 @@ function App() {
               handleCompute={handleCompute} setIsComputed={setIsComputed}
               handleFit={handleFit}
               endpoint={ENDPOINT}
+              chainData={chainData}
             />
             <div className={styles.DisplayPad}>
                 <CanvasPad 

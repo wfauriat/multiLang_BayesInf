@@ -5,6 +5,9 @@ from UIcomps.componentsGUI import ModelUI
 from pyBI.inference import MHalgo
 from pyBI.base import UnifVar, NormVar, HalfNormVar
 
+import numpy as np
+from sklearn.model_selection import train_test_split
+
 model = ModelUI()
 model.currentM = 0
 model.currentDistType = "Normal"
@@ -50,6 +53,23 @@ def handle_select_case():
     model.load_case()
     
     return jsonify({'message': 'Success', 'received': selected_item}), 200
+
+@bp_case.route('/customData', methods=['POST'])
+def handle_select_custom_case():
+    data = request.get_json()
+    input_data = data.get('data')
+
+    # print(f"Received: {input_data[0:2]}")
+    
+    XX = np.array(input_data)[:,:-1]
+    yy = np.array(input_data)[:,-1]
+    X_train, X_test, y_train, y_test = train_test_split(
+        XX, yy, test_size=0.95, random_state=42)
+    model.custom_case.xmes = X_train
+    model.custom_case.ymes = y_train
+    model.load_case()
+    
+    return jsonify({'message': 'Success'}), 200
 
 @bp_case.route('/select', methods=['GET'])
 def get_select_case():

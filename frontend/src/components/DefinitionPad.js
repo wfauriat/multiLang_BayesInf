@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import styles from './DefinitionPad.module.css'
-import { handlePost, ConfigField } from '../utils/helper.js';
+import { handlePost, handlePostCustomCase, ConfigField, simpleCsvParser, matrixToCsv } from '../utils/helper.js';
 
 export default function DefinitionPad({ 
     selectedCase, setSelectedCase, 
@@ -14,92 +15,123 @@ export default function DefinitionPad({
     Nburn, setNburn,
     handleCompute, setIsComputed,
     handleFit,
-    endpoint
+    endpoint,
+    chainData
     }) {
 
-    const handleSelectCase = async (e) => {
-        const value = e.target.value;
-        setSelectedCase(value);
-        handlePost(value, "selectedItem", endpoint + "case/select")
-        setIsComputed(false)
-    };
+  const [file, setFile] = useState(null);
+  const [fileContent, setFileContent] = useState('');
 
-    const handleSelectReg = async (e) => {
-        const value = e.target.value;
-        setSelectedModReg(value);
-        handlePost(value, "selectedItem", endpoint + "regr/select")
-    };
 
-    // const handleSelectDist= async (e) => {
-    //     const value = e.target.value;
-    //     setSelectedDistType(value);
-    //     // handlePost(value, "selectedItem", endpoint + "modelBayes/select")
-    //     try {
-    //       const response = await fetch(endpoint + "modelBayes/select", {
-    //         method: 'POST',
-    //         headers: {'Content-Type': 'application/json'},
-    //         body: JSON.stringify({ "selected_dist" : value, "paramMLow" : paramMLow, "paramMHigh": paramMHigh }),
-    //       });
-    //       if (response.ok) {
-    //         console.log("POST SUCCESSFUL", value)
-    //       }
-    //     } catch (error) {
-    //       console.log(error.message);
-    //     }
-    //   }; 
-    
-        const handleSelectDist= async () => {
-        try {
-          const response = await fetch(endpoint + "modelBayes/select", {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ "selected_dist" : selectedDistType,
-               "paramMLow" : parseFloat(paramMLow), "paramMHigh": parseFloat(paramMHigh) }),
-          });
-          if (response.ok) {
-            console.log("POST SUCCESSFUL", selectedDistType)
-          }
-        } catch (error) {
-          console.log(error.message);
-        }
-      }; 
-
-    const handleSelectCurrentM= async (e) => {
-        const value = parseInt(e.target.value);
-        handlePost(value, "selectedItem", endpoint + "modelBayes/current")
-    };
-
-    const configFields = [
-        {label: 'NMCMC', value: NMCMC, onChange: setNMCMC,
-        endpoint: endpoint + "inf/NMCMC"},
-        {label: 'Nthin', value: Nthin, onChange: setNthin,
-        endpoint: endpoint + "inf/Nthin"},
-        {label: 'Nburn', value: Nburn, onChange: setNburn,
-        endpoint: endpoint + "inf/Nburn"}
-    ];
-
-    
-    const DimSelectFieldX = ({selectDimField, setterDimField, dimChain}) => {
-      const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
-      return (
-              <select value={selectDimField} 
-                onChange={(e) => {
-                  setterDimField(parseInt(e.target.value));
-                  handleSelectCurrentM(e);
-                }}
-                onClick={(e) => {
-                  setterDimField(parseInt(e.target.value));
-                  handleSelectCurrentM(e);
-                }}
-                style={{width:"80px", display:"inline", marginLeft:"1em"}}>
-                {optionsArrayX.map((index) => (
-                  <option key={index} value={index}>{index}</option>
-                  ))}
-              </select>
-      );
+  const handleFileChange = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (!uploadedFile) {
+      return;
     }
   
+    setFile(uploadedFile);
+    setFileContent('');
+
+    const reader = new FileReader();
+    if (uploadedFile.name.endsWith('.csv')) {
+      reader.onload = (e) => {
+        const csvString = e.target.result;
+        const parsedData = simpleCsvParser(csvString);
+        setFileContent(parsedData);
+        setSelectedCase("Custom")
+        console.log(parsedData)
+        handlePostCustomCase(parsedData, endpoint + "case/customData")
+      };
+      reader.readAsText(uploadedFile);
+    }
+    else {
+      setFileContent('');
+    }   
+  };
+
+  const handleSelectCase = async (e) => {
+      const value = e.target.value;
+      setSelectedCase(value);
+      handlePost(value, "selectedItem", endpoint + "case/select");
+      setIsComputed(false);
+  };
+
+  const handleSelectReg = async (e) => {
+      const value = e.target.value;
+      setSelectedModReg(value);
+      handlePost(value, "selectedItem", endpoint + "regr/select")
+  };
+
+  const handleSelectDist= async () => {
+  // const value = e.target.value;
+    try {
+      const response = await fetch(endpoint + "modelBayes/select", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ "selected_dist" : selectedDistType,
+          "paramMLow" : parseFloat(paramMLow), "paramMHigh": parseFloat(paramMHigh) }),
+      });
+      if (response.ok) {
+        console.log("POST SUCCESSFUL", selectedDistType)
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  }; 
+
+  const handleSelectCurrentM = async (e) => {
+      const value = parseInt(e.target.value);
+      handlePost(value, "selectedItem", endpoint + "modelBayes/current");
+  };
+
+  const configFields = [
+      {label: 'NMCMC', value: NMCMC, onChange: setNMCMC,
+      endpoint: endpoint + "inf/NMCMC"},
+      {label: 'Nthin', value: Nthin, onChange: setNthin,
+      endpoint: endpoint + "inf/Nthin"},
+      {label: 'Nburn', value: Nburn, onChange: setNburn,
+      endpoint: endpoint + "inf/Nburn"}
+  ];
+
+  
+  const DimSelectFieldX = ({selectDimField, setterDimField, dimChain}) => {
+    const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
     return (
+            <select value={selectDimField} 
+              onChange={(e) => {
+                setterDimField(parseInt(e.target.value));
+                handleSelectCurrentM(e);
+              }}
+              onClick={(e) => {
+                setterDimField(parseInt(e.target.value));
+                handleSelectCurrentM(e);
+              }}
+              style={{width:"80px", display:"inline", marginLeft:"1em"}}>
+              {optionsArrayX.map((index) => (
+                <option key={index} value={index}>{index}</option>
+                ))}
+            </select>
+    );
+  };
+
+  const handleExport = () => {
+      const csvContent = matrixToCsv(chainData);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "exported_data.csv";
+      link.click();
+      // link.setAttribute("href", url);
+      // link.setAttribute("download", "exported_data.csv");
+      // document.body.appendChild(link);
+      // link.click();
+      // document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  };
+  
+     return (
         // DEFINITION PAD
         <div className={styles.DefinitionPad}>
 
@@ -110,10 +142,16 @@ export default function DefinitionPad({
                 <select value={selectedCase} onChange={handleSelectCase} onClick={handleSelectCase}>
                   <option value="Polynomial">Polynomial</option>
                   <option value="Housing">Housing</option>
+                  {fileContent && <option value="Custom">Custom</option>}
                 </select>
-                <div className={styles.FourButtonArray}>
-                  <button>Custom</button>
-                  <button>Import Data</button>
+                <div>
+                  {/* <button>Custom</button> */}
+                  <div style={{display:"flex", flexDirection:"column"}}>
+                    <label style={{width:"200px", margin:"auto", textAlign:"center", padding:"0.2em"}}>Import custom</label>
+                    <input type="file" style={{margin:"0.2em auto", width:"200px"}}
+                    accept='.csv' onChange={handleFileChange}/>
+                    {/* {file && <p>Selected: {file.name}</p>} */}
+                  </div>
                   <input type="number" placeholder="Data Set Size"></input>
                   <input type="number" placeholder="Cross Validation"></input>
                 </div>
@@ -179,6 +217,10 @@ export default function DefinitionPad({
                 <button style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
                 onClick={handleCompute}>
                   Compute
+              </button>
+              <button style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
+              onClick={handleExport}>
+                Export to CSV
               </button>
               </div>
             </div>

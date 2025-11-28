@@ -13,6 +13,21 @@ export const handlePost = async (val, key, endpoint) => {
     }
   };
 
+export const handlePostCustomCase = async (data, endpoint) => {
+ try {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({"data": data}),
+  });
+    if (response.ok) {
+        console.log("POST SUCCESSFUL")
+    }
+ } catch (error) {
+      console.log(error.message);
+    }
+};
+
 export function ConfigField({ label, value, onChange, onSend, endpoint }) {
   return (
     <div>
@@ -110,4 +125,19 @@ export const generateHistogramData = (data, binCount = 5) => {
   }));
 
   return histogramData;
+};
+
+export function simpleCsvParser(csvString) {
+  const rows = csvString.trim().split('\n');
+  const matrix = rows
+    .filter(line => line.trim() !== '')
+    .map(row => row.split(',').map(cell => parseFloat(cell.trim())));
+  return matrix;
+}
+
+
+export function matrixToCsv(matrix){
+  return matrix.map(row => 
+    row.join(',')
+  ).join('\n');
 };
