@@ -2,5 +2,8 @@ Flask==3.1.2
 flask_cors==6.0.1
 numpy==2.3.5
 scikit_learn==1.7.2
+scikit-optimize==0.10.2
 gunicorn==23.0.0
 pandas==2.3.2
+matplotlib==3.10.6
+scipy==1.16.2
