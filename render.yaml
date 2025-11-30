@@ -3,7 +3,7 @@ services:
     name: BI_webapp
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn BI_Flask:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

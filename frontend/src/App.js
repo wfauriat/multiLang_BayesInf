@@ -7,7 +7,8 @@ import ControlPad from './components/ControlPad';
 
 function App() {
 
-  const ENDPOINT = "http://127.0.0.1:5000/" // not used if proxy set to localhost:5000
+  const ENDPOINT = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  // const ENDPOINT = "http://127.0.0.1:5000/" // not used if proxy set to localhost:5000
 
   const [NMCMC, setNMCMC] = useState('');
   const [Nthin, setNthin] = useState('');
