@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from UIcomps.componentsGUI import ModelUI
+from backend.BI_Model import BI_Model
 
 from pyBI.inference import MHalgo
 from pyBI.base import UnifVar, NormVar, HalfNormVar
@@ -8,7 +8,8 @@ from pyBI.base import UnifVar, NormVar, HalfNormVar
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-model = ModelUI()
+model = BI_Model()
+
 model.currentM = 0
 model.currentDistType = "Normal"
 
