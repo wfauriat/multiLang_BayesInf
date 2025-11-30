@@ -7,8 +7,8 @@ from . import model
 
 import os
 
-template_dir = os.path.abspath('../frontend/build') 
-static_dir = os.path.abspath('../frontend/build/static')
+template_dir = os.path.abspath('./frontend/build') 
+static_dir = os.path.abspath('./frontend/build/static')
 
 
 def create_app():
