@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from PIL import Image
+# from PIL import Image
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -44,7 +44,7 @@ class PolynomialCase():
 
 class HousingCase():
     def __init__(self):
-        img = Image.open('./cases_data/cal_map.jpg')
+        # img = Image.open('./cases_data/cal_map.jpg')
         datacsv = pd.read_csv('./cases_data/cal_housing.data',
                                header=None, dtype='f8')
         tmp = np.loadtxt('./cases_data/cal_housing.domain',
