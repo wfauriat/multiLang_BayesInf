@@ -25,9 +25,9 @@ def create_app():
     app.register_blueprint(model.bp_regr)
     app.register_blueprint(model.bp_modelBayes)
 
-    @app.route('/')
-    def home():
-        return "Hello, BI_Flask!\n"
+    # @app.route('/')
+    # def home():
+    #     return "Hello, BI_Flask!\n"
     
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
