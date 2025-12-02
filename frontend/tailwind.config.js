@@ -4,9 +4,16 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: '#3b82f6',
+      },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+      }
+    },
   },
-  
   plugins: [],
 }

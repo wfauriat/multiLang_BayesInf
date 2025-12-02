@@ -30,22 +30,26 @@ export const handlePostCustomCase = async (data, endpoint) => {
 
 export function ConfigField({ label, value, onChange, onSend, endpoint }) {
   return (
-    <div>
-      <label style={{ minWidth: "80px", display: "inline-block"}}>
-          {label}
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+        {label}
       </label>
-      <input 
-          type="text" 
+      <div className="flex gap-2">
+        <input
+          type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={label}
-          style={{width: "100px", display: "inline-block"}}
+          className="flex-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           required
-      />
-      <button 
-          onClick={() => onSend(parseFloat(value), label, endpoint)}>
+        />
+        <button
+          onClick={() => onSend(parseFloat(value), label, endpoint)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium text-sm transition-colors"
+        >
           Send
-      </button>
+        </button>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,19 @@ import CanvasPad from './components/CanvasPad';
 import ControlPad from './components/ControlPad';
 // import ResizableDashboard from './components/ResizableDashboard';
 
+// Theme icons
+const SunIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+  </svg>
+);
+
 function App() {
 
   const ENDPOINT = process.env.REACT_APP_API_URL || 'http://localhost:5000/' || 'http://127.0.0.1:5000/'
@@ -39,6 +52,7 @@ function App() {
   const [computeProgress, setComputeProgress] = useState(0);
   const [computeStatus, setComputeStatus] = useState('');
   const [isComputing, setIsComputing] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
 
   useEffect(() => {
@@ -226,53 +240,76 @@ function App() {
   };
  
     return (
-      <div>
-          <h1 className={styles.HeaderApp}>Bayesian Inference</h1>
-          <div className={styles.MainContent}>
-            <DefinitionPad
-              selectedCase={selectedCase} setSelectedCase={setSelectedCase}
-              selectedModReg={selectedModReg} setSelectedModReg={setSelectedModReg}
-              dimChain={dimChain}
-              selectedDimM={selectedDimM} setSelectedDimM={setSelectedDimM}
-              selectedDistType={selectedDistType} setSelectedDistType={setSelectedDistType}
-              paramMLow={paramMLow} paramMHigh={paramMHigh}
-              setParamMLow={setParamMLow} setParamMHigh={setParamMHigh}
-              NMCMC={NMCMC} setNMCMC={setNMCMC}
-              Nthin={Nthin} setNthin={setNthin}
-              Nburn={Nburn} setNburn={setNburn}
-              handleCompute={handleCompute} setIsComputed={setIsComputed}
-              handleFit={handleFit}
-              endpoint={ENDPOINT}
-              chainData={chainData}
-              isComputing={isComputing}
-              computeProgress={computeProgress}
-              computeStatus={computeStatus}
-            />
-            <div className={styles.DisplayPad}>
-                <CanvasPad 
-                  chainData={chainData} selectedDimR={selectedDimR} 
+      <div className={darkMode ? 'dark' : ''}>
+        <div className="min-h-screen bg-white dark:bg-slate-900 transition-colors">
+          {/* Header */}
+          <header className="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-8 py-4">
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                  Bayesian Inference
+                </h1>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  aria-label="Toggle theme"
+                >
+                  {darkMode ? <SunIcon /> : <MoonIcon />}
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="grid grid-cols-[380px_1fr] gap-6">
+              {/* Sidebar */}
+              <aside className="sticky top-24 self-start">
+                <DefinitionPad
+                  selectedCase={selectedCase} setSelectedCase={setSelectedCase}
+                  selectedModReg={selectedModReg} setSelectedModReg={setSelectedModReg}
+                  dimChain={dimChain}
+                  selectedDimM={selectedDimM} setSelectedDimM={setSelectedDimM}
+                  selectedDistType={selectedDistType} setSelectedDistType={setSelectedDistType}
+                  paramMLow={paramMLow} paramMHigh={paramMHigh}
+                  setParamMLow={setParamMLow} setParamMHigh={setParamMHigh}
+                  NMCMC={NMCMC} setNMCMC={setNMCMC}
+                  Nthin={Nthin} setNthin={setNthin}
+                  Nburn={Nburn} setNburn={setNburn}
+                  handleCompute={handleCompute} setIsComputed={setIsComputed}
+                  handleFit={handleFit}
+                  endpoint={ENDPOINT}
+                  chainData={chainData}
+                  isComputing={isComputing}
+                  computeProgress={computeProgress}
+                  computeStatus={computeStatus}
+                />
+              </aside>
+
+              {/* Main content area */}
+              <main className="min-w-0">
+                <CanvasPad
+                  chainData={chainData} selectedDimR={selectedDimR}
                   selectedDim1={selectedDim1} selectedDim2={selectedDim2}
                   MCsortData={MCsortData} LLsortData={LLsortData}
                   xmes={xmes} yobs={yobs} postMAP={postMAP} postY={postY} postYeps={postYeps}
                   yregPred={yregPred}
                 />
-                <ControlPad 
-                  selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
-                  selectedDim1={selectedDim1} setSelectedDim1={setSelectedDim1}
-                  selectedDim2={selectedDim2} setSelectedDim2={setSelectedDim2}
-                  dimChain={dimChain} dimX={dimX}
-                />
-              <div>
-              <button onClick={()=>{console.log(dimChain)}}>
-                Test
-              </button>
+                <div className="mt-6">
+                  <ControlPad
+                    selectedDimR={selectedDimR} setSelectedDimR={setSelectedDimR}
+                    selectedDim1={selectedDim1} setSelectedDim1={setSelectedDim1}
+                    selectedDim2={selectedDim2} setSelectedDim2={setSelectedDim2}
+                    dimChain={dimChain} dimX={dimX}
+                  />
+                </div>
+              </main>
             </div>
-            </div>
+          </div>
         </div>
-        {/* <div>
-          <ResizableDashboard />
-        </div>  */}
-    </div>
+      </div>
     );
 }
 

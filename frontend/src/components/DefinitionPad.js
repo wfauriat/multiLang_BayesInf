@@ -100,7 +100,8 @@ export default function DefinitionPad({
   const DimSelectFieldX = ({selectDimField, setterDimField, dimChain}) => {
     const optionsArrayX = Array.from({ length: dimChain }, (v, i) => parseInt(i));
     return (
-            <select value={selectDimField} 
+            <select
+              value={selectDimField}
               onChange={(e) => {
                 setterDimField(parseInt(e.target.value));
                 handleSelectCurrentM(e);
@@ -109,9 +110,10 @@ export default function DefinitionPad({
                 setterDimField(parseInt(e.target.value));
                 handleSelectCurrentM(e);
               }}
-              style={{width:"80px", display:"inline", marginLeft:"1em"}}>
+              className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
               {optionsArrayX.map((index) => (
-                <option key={index} value={index}>{index}</option>
+                <option key={index} value={index}>Dimension {index}</option>
                 ))}
             </select>
     );
@@ -135,115 +137,230 @@ export default function DefinitionPad({
   };
   
      return (
-        // DEFINITION PAD
-        <div className={styles.DefinitionPad}>
+        <div className="space-y-5">
+            {/* DATA CASE SELECTION */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5 shadow-md">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                Data Case Selection
+              </h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Select Case
+                  </label>
+                  <select
+                    value={selectedCase}
+                    onChange={handleSelectCase}
+                    onClick={handleSelectCase}
+                    className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Polynomial">Polynomial</option>
+                    <option value="Housing">Housing</option>
+                    {fileContent && <option value="Custom">Custom</option>}
+                  </select>
+                </div>
 
-            {/* DATA CASE SELECTION PAD */} 
-            <div className={styles.DefSubPad}>
-              <h3>Data Case Selection</h3>
-              <div>
-                <select value={selectedCase} onChange={handleSelectCase} onClick={handleSelectCase}>
-                  <option value="Polynomial">Polynomial</option>
-                  <option value="Housing">Housing</option>
-                  {fileContent && <option value="Custom">Custom</option>}
-                </select>
-                <div>
-                  {/* <button>Custom</button> */}
-                  <div style={{display:"flex", flexDirection:"column"}}>
-                    <label style={{width:"200px", margin:"auto", textAlign:"center", padding:"0.2em"}}>Import custom</label>
-                    <input type="file" style={{margin:"0.2em auto", width:"200px"}}
-                    accept='.csv' onChange={handleFileChange}/>
-                    {/* {file && <p>Selected: {file.name}</p>} */}
+                {/* File Upload */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Import Custom Dataset
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      className="sr-only"
+                      onChange={handleFileChange}
+                      accept=".csv"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-200"
+                    >
+                      <div className="text-center">
+                        <svg className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                          {file ? (
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">{file.name}</span>
+                          ) : (
+                            <>
+                              <span className="font-medium text-blue-600 dark:text-blue-400">Click to upload</span>
+                              <span className="text-slate-500 dark:text-slate-500"> CSV file</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </label>
                   </div>
-                  <input type="number" placeholder="Data Set Size"></input>
-                  <input type="number" placeholder="Cross Validation"></input>
                 </div>
               </div>
             </div>
 
-            {/* REGRESSION MODEL PAD */} 
-            <div className={styles.DefSubPad}>    
-                <h3>Regressor Selection</h3>
-                <div>
-                    <select value={selectedModReg} onChange={handleSelectReg} onClick={handleSelectReg}>
+            {/* REGRESSION MODEL */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5 shadow-md">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                  Regression Model
+                </h3>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Select Model
+                      </label>
+                      <select
+                        value={selectedModReg}
+                        onChange={handleSelectReg}
+                        onClick={handleSelectReg}
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
                         <option value="Linear Polynomial">Linear Polynomial</option>
                         <option value="ElasticNet">Elastic Net</option>
                         <option value="SVR">SVR</option>
                         <option value="RandomForest">Random Forest</option>
-                    </select>
-                    <div className={styles.TwoButtonArray}>
-                        <button>Parameter</button>
-                        <button onClick={handleFit}>Fit Model</button>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md font-medium text-sm transition-colors">
+                          Parameters
+                        </button>
+                        <button
+                          onClick={handleFit}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium text-sm transition-colors"
+                        >
+                          Fit Model
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* BAYESIAN MODEL PAD */} 
-            <div className={styles.DefSubPad}>
-                <h3>Bayesian Model Selection</h3>
-                <div>
-                  <p style={{display:"inline-block", width:"150px", margin:"0.5em 0"}}>Dimension selection</p>
-                  <DimSelectFieldX selectDimField={selectedDimM} setterDimField={setSelectedDimM} dimChain={dimChain}/>
-                  {/* <select value={selectedDistType} onChange={handleSelectDist} onClick={handleSelectDist}> */}
-                  <select value={selectedDistType} onChange={(e) => {setSelectedDistType(e.target.value)}} >
-                    <option value="Normal">Normal</option>
-                    <option value="Uniform">Uniform</option>
-                    <option value="Half-Normal">Half-Normal</option>
-                  </select>
-                  <div style={{display:"flex", justifyContent:"center", flexDirection:"row"}}>
-                    <input type="text" placeholder="LowValue" value={paramMLow}
-                    onChange={(e) => {setParamMLow(e.target.value)}}
-                    style={{width:"100px", margin:"0.2em 1em"}}/>
-                    <input type="text" placeholder="HighValue" value={paramMHigh}
-                    onChange={(e) => {setParamMHigh(e.target.value)}}
-                    style={{width:"100px", margin:"0.2em 1em"}}/>
+            {/* BAYESIAN MODEL */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5 shadow-md">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                  Bayesian Model
+                </h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Parameter Dimension
+                    </label>
+                    <DimSelectFieldX selectDimField={selectedDimM} setterDimField={setSelectedDimM} dimChain={dimChain}/>
                   </div>
-                  <button style={{display:"block", width:"150px", margin:"0 auto"}} 
-                    onClick={() => {handleSelectDist();}}>Send</button>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Prior Distribution
+                    </label>
+                    <select
+                      value={selectedDistType}
+                      onChange={(e) => {setSelectedDistType(e.target.value)}}
+                      className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Normal">Normal</option>
+                      <option value="Uniform">Uniform</option>
+                      <option value="Half-Normal">Half-Normal</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Low Value
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Low"
+                        value={paramMLow}
+                        onChange={(e) => {setParamMLow(e.target.value)}}
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                        High Value
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="High"
+                        value={paramMHigh}
+                        onChange={(e) => {setParamMHigh(e.target.value)}}
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {handleSelectDist();}}
+                    className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md font-medium text-sm transition-colors"
+                  >
+                    Update Prior
+                  </button>
                 </div>
             </div>
 
-            {/* INFERENCE PAD */} 
-            <div className={styles.DefSubPad}>
-                <h3>Inference Configuration</h3>
-                {configFields.map((field) => (
-                    <ConfigField
-                    key={field.label}
-                    label={field.label}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onSend={handlePost}
-                    endpoint={field.endpoint}
-                    />
-                ))}
-              <div>
+            {/* INFERENCE CONFIGURATION */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5 shadow-md">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                  Inference Configuration
+                </h3>
+                <div className="space-y-4">
+                  {configFields.map((field) => (
+                      <ConfigField
+                      key={field.label}
+                      label={field.label}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onSend={handlePost}
+                      endpoint={field.endpoint}
+                      />
+                  ))}
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="space-y-3">
                 <button
-                  style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
                   onClick={handleCompute}
-                  disabled={isComputing}>
-                  {isComputing ? 'Computing...' : 'Compute'}
+                  disabled={isComputing}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+                >
+                  {isComputing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Computing...
+                    </span>
+                  ) : 'Compute'}
                 </button>
 
                 {isComputing && (
-                  <div className={styles.ProgressContainer}>
-                    <p className={styles.ProgressStatus}>{computeStatus}</p>
-                    <div className={styles.ProgressBar}>
+                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {computeStatus}
+                      </p>
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                        {computeProgress}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2 overflow-hidden">
                       <div
-                        className={styles.ProgressFill}
+                        className="bg-gradient-to-r from-blue-500 to-blue-400 h-full rounded-full transition-all duration-300 ease-out"
                         style={{ width: `${computeProgress}%` }}
                       />
                     </div>
-                    <span className={styles.ProgressText}>{computeProgress}%</span>
                   </div>
                 )}
 
                 <button
-                  style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
-                  onClick={handleExport}>
+                  onClick={handleExport}
+                  className="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium py-2.5 px-4 rounded-md transition-colors duration-200"
+                >
                   Export to CSV
                 </button>
               </div>
-            </div>
           </div>
     )
 
