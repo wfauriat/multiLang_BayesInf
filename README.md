@@ -1,4 +1,6 @@
-## Bayesian Inference -- Full-stack web App
+# Bayesian Inference demonstrator App (Web and Desktop)
+
+## Full-stack Web App
 
 - Bayesian Inference core (core in **Python**, and some small attemps in C++ (not yet implemented because the gain w/r to numpy/python is not significant)),
     - In the style of **probabilistic programming paradigm**, i.e. with objects for random variables (observed or priors)
@@ -9,7 +11,7 @@
 
 
 
-### Detailed install from git repo (to run locally both the Front-end web UI and the Back-end server)
+### Detailed install from git repo (to run locally both the front-end web UI and the back-end server)
 
 ``` bash
 gh repo clone wfauriat/multiLang_BayesInf   ## Clone the repo
@@ -35,9 +37,11 @@ chmod u+rx run_local_server.sh              ## Authorize script execution local
 
 Also, hosted on Render @ https://bi-webapp.onrender.com/
 
-## Bayesian Inference -- Desktop App
+---
 
-(also enclosed in the repository)
+## Desktop App
+
+*(also enclosed in the repository)*
 
 - Same **Python** Core (as above)
 - GUI in PyQt5
