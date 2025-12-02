@@ -14,8 +14,8 @@
 ### Detailed install from git repo (to run locally both the front-end web UI and the back-end server)
 
 ``` bash
-gh repo clone wfauriat/multiLang_BayesInf   ## Clone the repo
-cd multiLang_BayesInf                       
+gh repo clone wfauriat/BayesInfApp          ## Clone the repo
+cd BayesInfApp                       
 python3 -m venv .venv                       ## Create python virtual env
 source .venv/bin/activate                   ## Activate the virtual env
 pip install -r requirements.txt             ## Install required python dependencies locally
@@ -49,8 +49,8 @@ Also, hosted on Render @ https://bi-webapp.onrender.com/
 > Run "python Qt_App.py" (in a virtual env that includes PyQt5 : not in requirement.txt, must be added)
 
 ``` bash
-gh repo clone wfauriat/multiLang_BayesInf   
-cd multiLang_BayesInf                       
+gh repo clone wfauriat/BayesInfApp   
+cd BayesInfApp                       
 python3 -m venv .venv                       
 source .venv/bin/activate                   
 pip install -r requirements.txt 
