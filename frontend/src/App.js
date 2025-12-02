@@ -35,6 +35,10 @@ function App() {
   const [postY, setPostY] = useState(null);
   const [postYeps, setPostYeps] = useState(null);
   const [yregPred, setYRegPred] = useState(null);
+  const [taskId, setTaskId] = useState(null);
+  const [computeProgress, setComputeProgress] = useState(0);
+  const [computeStatus, setComputeStatus] = useState('');
+  const [isComputing, setIsComputing] = useState(false);
 
 
   useEffect(() => {
@@ -127,16 +131,84 @@ function App() {
   };
 
   const handleCompute = async () => {
-    try{
-        const response = await fetch(ENDPOINT + "compute");
-        const data = await response.json();
-        console.log(data.message)
-        setIsComputed(true)
-        setIsDisplayed(false)
+    try {
+      setIsComputing(true);
+      setComputeProgress(0);
+      setComputeStatus('Starting computation...');
+
+      // Start computation
+      const response = await fetch(ENDPOINT + "compute", {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (response.status === 202) {
+        setTaskId(data.task_id);
+        pollTaskStatus(data.task_id);
+      } else {
+        throw new Error('Failed to start computation');
+      }
     } catch (err) {
-      console.log(err)
+      console.log(err);
       setIsComputed(false);
+      setIsComputing(false);
+      setComputeStatus('Failed to start computation');
     }
+  };
+
+  const pollTaskStatus = async (task_id) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(ENDPOINT + `task/${task_id}/status`);
+        const data = await response.json();
+
+        setComputeStatus(data.status || '');
+        setComputeProgress(data.progress || 0);
+
+        if (data.state === 'SUCCESS') {
+          clearInterval(interval);
+
+          // Fetch results
+          const resultResponse = await fetch(ENDPOINT + `task/${task_id}/result`);
+          const resultData = await resultResponse.json();
+
+          // Update state with results
+          setChainData(resultData.chains);
+          setDimChain(parseInt(resultData.chains[0].length));
+          setMCsortData(resultData.MCsort);
+          setLLsortData(resultData.LLsort);
+          setXmes(resultData.xmes);
+          setDimX(parseInt(resultData.xmes[0].length));
+          setYobs(resultData.obs);
+          setPostMAP(resultData.postMAP);
+          setPostY(resultData.postY);
+          setPostYeps(resultData.postYeps);
+          setYRegPred(resultData.yregPred);
+          setSelectedDimM(parseInt(0));
+
+          setIsComputed(true);
+          setIsDisplayed(false);
+          setIsComputing(false);
+          setComputeStatus('Computation completed!');
+
+        } else if (data.state === 'FAILURE') {
+          clearInterval(interval);
+          setIsComputed(false);
+          setIsComputing(false);
+          setComputeStatus('Computation failed: ' + (data.error || 'Unknown error'));
+
+        } else if (data.state === 'RUNNING') {
+          // Continue polling - task is still running
+        }
+
+      } catch (err) {
+        console.log(err);
+        clearInterval(interval);
+        setIsComputed(false);
+        setIsComputing(false);
+        setComputeStatus('Error checking task status');
+      }
+    }, 1000); // Poll every second
   };
 
   const handleFit = async () => {
@@ -157,21 +229,24 @@ function App() {
       <div>
           <h1 className={styles.HeaderApp}>Bayesian Inference</h1>
           <div className={styles.MainContent}>
-            <DefinitionPad  
+            <DefinitionPad
               selectedCase={selectedCase} setSelectedCase={setSelectedCase}
               selectedModReg={selectedModReg} setSelectedModReg={setSelectedModReg}
-              dimChain={dimChain} 
-              selectedDimM={selectedDimM} setSelectedDimM={setSelectedDimM} 
+              dimChain={dimChain}
+              selectedDimM={selectedDimM} setSelectedDimM={setSelectedDimM}
               selectedDistType={selectedDistType} setSelectedDistType={setSelectedDistType}
               paramMLow={paramMLow} paramMHigh={paramMHigh}
               setParamMLow={setParamMLow} setParamMHigh={setParamMHigh}
-              NMCMC={NMCMC} setNMCMC={setNMCMC} 
+              NMCMC={NMCMC} setNMCMC={setNMCMC}
               Nthin={Nthin} setNthin={setNthin}
               Nburn={Nburn} setNburn={setNburn}
               handleCompute={handleCompute} setIsComputed={setIsComputed}
               handleFit={handleFit}
               endpoint={ENDPOINT}
               chainData={chainData}
+              isComputing={isComputing}
+              computeProgress={computeProgress}
+              computeStatus={computeStatus}
             />
             <div className={styles.DisplayPad}>
                 <CanvasPad 

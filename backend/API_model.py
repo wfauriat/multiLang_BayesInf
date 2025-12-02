@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from backend.BI_Model import BI_Model
+from backend.task_manager import task_manager
 
 from pyBI.inference import MHalgo
 from pyBI.base import UnifVar, NormVar, HalfNormVar
@@ -135,25 +136,129 @@ def get_MParam():
         return jsonify({"lowM": value[0], "highM": value[1]}), 200
 
 
-@bp_comp.route('/compute')
-def compute():
-    model.MCalgo = MHalgo(N=model.NMCMC,
-                                    Nthin=model.Nthin,
-                                    Nburn=model.Nburn,
-                                    is_adaptive=True,
-                                    verbose=model.verbose)
-    model.MCalgo.initialize(model.obsvar,
-                                     model.rndUs, 
-                                     model.rnds)
+def _run_mcmc_computation(task_id: str):
+    """
+    Background function for MCMC computation
+    Updates task progress during execution
+    """
+    # Update progress: Initializing
+    task_manager.update_task(
+        task_id,
+        progress=5,
+        status_message='Initializing MCMC algorithm'
+    )
+
+    # Initialize MCMC
+    model.MCalgo = MHalgo(
+        N=model.NMCMC,
+        Nthin=model.Nthin,
+        Nburn=model.Nburn,
+        is_adaptive=True,
+        verbose=model.verbose
+    )
+
+    task_manager.update_task(
+        task_id,
+        progress=10,
+        status_message='Setting up inference'
+    )
+
+    model.MCalgo.initialize(model.obsvar, model.rndUs, model.rnds)
     model.MCalgo.MCchain[0] = model.bstart
     model.MCalgo.state(0, set_state=True)
+
+    task_manager.update_task(
+        task_id,
+        progress=15,
+        status_message=f'Running MCMC ({model.NMCMC} iterations)'
+    )
+
+    # Run inference
     model.MCalgo.runInference()
+
+    task_manager.update_task(
+        task_id,
+        progress=70,
+        status_message='Running regression fit'
+    )
+
+    # Regression fit
     model.regr_fit()
+
+    task_manager.update_task(
+        task_id,
+        progress=80,
+        status_message='Post-processing chains'
+    )
+
+    # Post-process
     model.postpar = model.MCalgo.cut_chain
     model.MCsort = model.MCalgo.idx_chain
     model.LLsort = model.MCalgo.cut_llchain[model.MCalgo.sorted_indices]
     model.post_treat_chains()
-    return jsonify({'message': 'Computation Succeded'}), 200
+
+    task_manager.update_task(
+        task_id,
+        progress=95,
+        status_message='Preparing results'
+    )
+
+    # Return results
+    return {
+        'chains': model.MCalgo.cut_chain.tolist(),
+        'MCsort': model.MCsort.tolist(),
+        'LLsort': model.LLsort.tolist(),
+        'xmes': model.data_case.xmes.tolist(),
+        'obs': model.data_case.ymes.tolist(),
+        'postMAP': model.postMAP.tolist(),
+        'postY': model.postY.tolist(),
+        'postYeps': model.postYeps.tolist(),
+        'yregPred': model.yreg_pred.tolist()
+    }
+
+
+@bp_comp.route('/compute', methods=['POST'])
+def compute():
+    """Start async MCMC computation and return task ID"""
+    # Create new task
+    task_id = task_manager.create_task()
+
+    # Start computation in background thread
+    task_manager.run_task(task_id, _run_mcmc_computation)
+
+    return jsonify({
+        'task_id': task_id,
+        'message': 'Computation started'
+    }), 202
+
+
+@bp_comp.route('/task/<task_id>/status', methods=['GET'])
+def get_task_status(task_id):
+    """Get status of a background task"""
+    task = task_manager.get_task(task_id)
+
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+
+    return jsonify(task.to_dict()), 200
+
+
+@bp_comp.route('/task/<task_id>/result', methods=['GET'])
+def get_task_result(task_id):
+    """Get result of completed task"""
+    task = task_manager.get_task(task_id)
+
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+
+    if task.state != 'SUCCESS':
+        return jsonify({
+            'error': 'Task not completed',
+            'state': task.state,
+            'status': task.status_message
+        }), 400
+
+    return jsonify(task.result), 200
 
 @bp_comp.route('/results')
 def get_chains():

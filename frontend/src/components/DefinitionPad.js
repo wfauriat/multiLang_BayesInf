@@ -2,10 +2,10 @@ import { useState } from 'react';
 import styles from './DefinitionPad.module.css'
 import { handlePost, handlePostCustomCase, ConfigField, simpleCsvParser, matrixToCsv } from '../utils/helper.js';
 
-export default function DefinitionPad({ 
-    selectedCase, setSelectedCase, 
+export default function DefinitionPad({
+    selectedCase, setSelectedCase,
     selectedModReg, setSelectedModReg,
-    dimChain, 
+    dimChain,
     selectedDimM, setSelectedDimM,
     selectedDistType, setSelectedDistType,
     paramMLow, paramMHigh,
@@ -16,7 +16,10 @@ export default function DefinitionPad({
     handleCompute, setIsComputed,
     handleFit,
     endpoint,
-    chainData
+    chainData,
+    isComputing,
+    computeProgress,
+    computeStatus
     }) {
 
   const [file, setFile] = useState(null);
@@ -214,14 +217,31 @@ export default function DefinitionPad({
                     />
                 ))}
               <div>
-                <button style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
-                onClick={handleCompute}>
-                  Compute
-              </button>
-              <button style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
-              onClick={handleExport}>
-                Export to CSV
-              </button>
+                <button
+                  style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
+                  onClick={handleCompute}
+                  disabled={isComputing}>
+                  {isComputing ? 'Computing...' : 'Compute'}
+                </button>
+
+                {isComputing && (
+                  <div className={styles.ProgressContainer}>
+                    <p className={styles.ProgressStatus}>{computeStatus}</p>
+                    <div className={styles.ProgressBar}>
+                      <div
+                        className={styles.ProgressFill}
+                        style={{ width: `${computeProgress}%` }}
+                      />
+                    </div>
+                    <span className={styles.ProgressText}>{computeProgress}%</span>
+                  </div>
+                )}
+
+                <button
+                  style={{margin: "0 auto", display:"block", width:"100px", marginTop:"10px"}}
+                  onClick={handleExport}>
+                  Export to CSV
+                </button>
               </div>
             </div>
           </div>
