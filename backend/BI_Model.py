@@ -1,13 +1,11 @@
 
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from cases_data.data_cases_def import (
     VoidCase, PolynomialCase, HousingCase)
 
 from pyBI.base import (
-    UnifVar, NormVar, InvGaussVar, HalfNormVar, ObsVar)
-from pyBI.inference import MHalgo, MHwGalgo
+    UnifVar, NormVar, HalfNormVar, ObsVar)
 
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import ElasticNet

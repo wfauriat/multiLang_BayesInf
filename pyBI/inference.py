@@ -8,8 +8,8 @@ from matplotlib.pyplot import subplots ## FOR VISUALISATION
 
 from scipy.stats import gaussian_kde ## ONLY FOR POSTERIOR VISUALISATION
 
-from .base import rnvmultiD
-from .base import ObsVar, RandVar
+from pyBI.base import rnvmultiD
+from pyBI.base import ObsVar, RandVar
 
 
 ###############################################################################

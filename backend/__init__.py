@@ -1,9 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
-from flask import send_file, render_template
+from flask import render_template
 
 
-from . import model
+from backend import API_model
 
 import os
 
@@ -18,12 +18,12 @@ def create_app():
     CORS(app) # proxy can be used on the front side to prevent CORS issue
     # put "proxy": "http://127.0.0.1:5000", in package.json (on the front size)
 
-    app.register_blueprint(model.bp_inf)
-    app.register_blueprint(model.bp_comp)
-    app.register_blueprint(model.bp_case)
-    app.register_blueprint(model.bp_visu)
-    app.register_blueprint(model.bp_regr)
-    app.register_blueprint(model.bp_modelBayes)
+    app.register_blueprint(API_model.bp_inf)
+    app.register_blueprint(API_model.bp_comp)
+    app.register_blueprint(API_model.bp_case)
+    app.register_blueprint(API_model.bp_visu)
+    app.register_blueprint(API_model.bp_regr)
+    app.register_blueprint(API_model.bp_modelBayes)
 
     # @app.route('/')
     # def home():
